@@ -1,0 +1,37 @@
+{
+  "name": "aitos",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "yarn install && yarn workspace aitos-backend install && yarn workspace aitos-frontend install",
+    "dev": "concurrently \"yarn workspace aitos-backend dev\" \"yarn workspace aitos-frontend dev\"",
+    "dev:backend": "yarn workspace aitos-backend dev",
+    "dev:frontend": "yarn workspace aitos-frontend dev",
+    "build": "yarn workspace aitos-frontend build",
+    "start:backend": "yarn workspace aitos-backend start",
+    "start:frontend": "yarn workspace aitos-frontend preview",
+    "db:init": "yarn workspace aitos-backend db:init",
+    "db:generate": "yarn workspace aitos-backend db:generate",
+    "docker:up": "docker-compose up --build",
+    "docker:up:bg": "docker-compose up -d --build",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "description": "AiToS - Analyze resumes against job descriptions using AI",
+  "keywords": [
+    "cv",
+    "resume",
+    "ats",
+    "ai",
+    "analysis",
+    "ollama"
+  ],
+  "packageManager": "yarn@4.9.4"
+}

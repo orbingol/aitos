@@ -1,0 +1,267 @@
+openapi: 3.1.0
+info:
+  title: AiToS API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/cv:
+    get:
+      summary: List CVs
+      responses:
+        '200':
+          description: List CVs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CV'
+    post:
+      summary: Upload CV (PDF or DOCX)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Uploaded CV metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CVUploadResponse'
+
+  /api/cv/{id}:
+    get:
+      summary: Retrieve CV by ID (parsed text)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: CV
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CV'
+    put:
+      summary: Update CV text
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+      responses:
+        '200': { description: Updated }
+    delete:
+      summary: Delete CV
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+
+  /api/jd:
+    get:
+      summary: List JDs
+      responses:
+        '200':
+          description: List JDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JD'
+    post:
+      summary: Create JD
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+              required: [text]
+      responses:
+        '200':
+          description: JD created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JDCreateResponse'
+
+  /api/jd/{id}:
+    get:
+      summary: Retrieve JD by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: JD
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JD'
+    put:
+      summary: Update JD text
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+      responses:
+        '200': { description: Updated }
+    delete:
+      summary: Delete JD
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+
+  /api/analyze:
+    post:
+      summary: Analyze a CV against a JD via Ollama
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cvId: { type: string }
+                jdId: { type: string }
+                model: { type: string, enum: [gemma3, qwen3, gpt-oss] }
+              required: [cvId, jdId, model]
+      responses:
+        '200':
+          description: Report queued/completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reportId: { type: string }
+
+  /api/report:
+    get:
+      summary: List reports
+      responses:
+        '200':
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+
+  /api/report/{id}:
+    get:
+      summary: Retrieve report
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+    delete:
+      summary: Delete report
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+
+  /api/report/{id}/reanalyze:
+    post:
+      summary: Reanalyze an existing report with a new model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model: { type: string, enum: [gemma3, qwen3, gpt-oss] }
+              required: [model]
+      responses:
+        '200': { description: Reanalyzed }
+
+components:
+  schemas:
+    CV:
+      type: object
+      properties:
+        id: { type: string }
+        filename: { type: string }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+    CVUploadResponse:
+      type: object
+      properties:
+        id: { type: string }
+        filename: { type: string }
+        preview: { type: string }
+    JD:
+      type: object
+      properties:
+        id: { type: string }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+    JDCreateResponse:
+      type: object
+      properties:
+        id: { type: string }
+    Report:
+      type: object
+      properties:
+        id: { type: string }
+        cvId: { type: string }
+        jdId: { type: string }
+        model: { type: string }
+        jsonReport: { type: object }
+        humanReport: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
