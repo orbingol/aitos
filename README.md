@@ -32,6 +32,8 @@ experimenting with Ollama’s API.
 A comprehensive full-stack application for analyzing resumes and CVs against job descriptions using AI models via Ollama.
 AiToS simulates Applicant Tracking System (ATS) behavior to help job seekers optimize their resumes.
 
+![Dashboard](/docs/assets/aitos-dashboard.png?raw=true "AiToS Dashboard")
+
 ## Features
 
 - **Backend (Node.js + Express + SQLite/Prisma)**
