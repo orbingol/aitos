@@ -1012,7 +1012,7 @@ __metadata:
     dotenv: "npm:^16.4.5"
     express: "npm:^4.19.2"
     js-yaml: "npm:^4.1.0"
-    mammoth: "npm:^1.6.0"
+    mammoth: "npm:^1.11.0"
     multer: "npm:^1.4.5-lts.1"
     node-fetch: "npm:^3.3.2"
     nodemon: "npm:^3.1.0"
@@ -3645,9 +3645,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mammoth@npm:^1.6.0":
-  version: 1.10.0
-  resolution: "mammoth@npm:1.10.0"
+"mammoth@npm:^1.11.0":
+  version: 1.11.0
+  resolution: "mammoth@npm:1.11.0"
   dependencies:
     "@xmldom/xmldom": "npm:^0.8.6"
     argparse: "npm:~1.0.3"
@@ -3661,7 +3661,7 @@ __metadata:
     xmlbuilder: "npm:^10.0.0"
   bin:
     mammoth: bin/mammoth
-  checksum: 10c0/bfd1d8621a8f97fb63203301dc26e66931f967a0f56379a02284578bb669716d139993b025249e7a5b339ef48381924f83fc15d9429e30b0496ce01cb308bf7d
+  checksum: 10c0/20fa5b902a9ec3ed4b86d247f45cf08e9dedb22ad175a156839e921280211b40fbd9db4cabdeb25368fe1fc038dd385deaddfa997e1779e45d663790f80fdff7
   languageName: node
   linkType: hard
 
