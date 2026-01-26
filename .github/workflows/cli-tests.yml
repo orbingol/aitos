@@ -1,0 +1,54 @@
+name: CLI Tests
+
+on:
+  push:
+    paths:
+      - 'cli/**'
+      - '.github/workflows/cli-tests.yml'
+  pull_request:
+    paths:
+      - 'cli/**'
+      - '.github/workflows/cli-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      YQ_VERSION: v4.50.1
+      YQ_CHECKSUM: c7a1278e6bbc4924f41b56db838086c39d13ee25dcb22089e7fbf16ac901f0d4
+      TIKA_VERSION: 3.2.3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jre-headless poppler-utils enscript ghostscript jq
+
+      - name: Install yq
+        run: |
+          cd /usr/local/bin
+          sudo curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -o yq
+          echo "${YQ_CHECKSUM}  yq" | sudo sha256sum -c -
+          sudo chmod +x yq
+
+      - name: Install Tika App
+        run: |
+          cd /usr/local/bin
+          sudo wget https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar -O tika-app.jar
+          sudo wget https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar.sha512 -O tika-app.jar.sha512
+          echo "$(cat tika-app.jar.sha512)  tika-app.jar" | sudo sha512sum -c -
+          sudo rm tika-app.jar.sha512
+          echo '#!/bin/bash' | sudo tee /usr/local/bin/tika
+          echo 'java -jar /usr/local/bin/tika-app.jar "$@"' | sudo tee -a /usr/local/bin/tika
+          sudo chmod +x /usr/local/bin/tika
+
+      - name: Generate PDF fixture
+        run: |
+          enscript --output=- cli/tests/fixtures/resume.txt | ps2pdf - cli/tests/fixtures/resume.pdf
+
+      - name: Run Tests
+        run: |
+          chmod +x cli/aitos.sh
+          cd cli/tests && ./test_runner.sh

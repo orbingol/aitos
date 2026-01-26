@@ -20,14 +20,6 @@
 set -e
 set -o pipefail
 
-if [ "$#" -lt 3 ]; then
-  echo "Usage: $0 [--poppler] [--text-only] <resume.pdf/docx> <job_description.txt> <model>"
-  echo "Example: $0 resume.pdf job.txt gemma3"
-  echo "Example with Poppler and Text-only: $0 --poppler --text-only resume.pdf job.txt qwen3"
-  echo "Available models: gemma3, qwen3, gpt-oss"
-  exit 1
-fi
-
 USE_POPPLER=false
 TEXT_ONLY=false
 
@@ -48,32 +40,59 @@ while [[ "$1" == --* ]]; do
   esac
 done
 
+if [ "$#" -lt 3 ]; then
+  echo "Usage: $0 [--poppler] [--text-only] <resume.pdf/docx/txt> <job_description.txt> <model>"
+  echo "Example: $0 resume.pdf job.txt gemma3"
+  echo "Example with Poppler and Text-only: $0 --poppler --text-only resume.pdf job.txt qwen3"
+  echo "Available models: gemma3, qwen3, gpt-oss"
+  exit 1
+fi
+
 RESUME=$1
 JD=$2
 MODEL=$3
+
+if [ ! -f "$RESUME" ]; then
+  echo "❌ Resume file not found: $RESUME"
+  exit 1
+fi
+
+if [ ! -f "$JD" ]; then
+  echo "❌ Job description file not found: $JD"
+  exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RESUME_DIR="$(cd "$(dirname "$RESUME")" && pwd)"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 BASENAME=$(basename "$RESUME")
-TMP_RESUME="$RESUME_DIR/${BASENAME}_${TIMESTAMP}.txt"
 
 # 1. Extract text
 EXT="${RESUME##*.}"
 
-if [ "$EXT" = "pdf" ]; then
+if [ "$EXT" = "txt" ]; then
+  echo "📄 Using existing text file..."
+  TMP_RESUME="$RESUME"
+elif [ "$EXT" = "pdf" ]; then
+  TMP_RESUME="$RESUME_DIR/${BASENAME}_${TIMESTAMP}.txt"
   if [ "$USE_POPPLER" = true ]; then
     echo "📄 Extracting text from PDF using Poppler..."
-    pdftotext "$RESUME" "$TMP_RESUME"
+    pdftotext "$RESUME" "$TMP_RESUME" || { echo "❌ PDF extraction failed"; exit 1; }
   else
     echo "📄 Extracting text from PDF using Tika..."
-    tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME"
+    tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME" || { echo "❌ PDF extraction failed"; exit 1; }
   fi
 elif [ "$EXT" = "docx" ]; then
+  TMP_RESUME="$RESUME_DIR/${BASENAME}_${TIMESTAMP}.txt"
   echo "📄 Extracting text from DOCX using Tika..."
-  tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME"
+  tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME" || { echo "❌ DOCX extraction failed"; exit 1; }
 else
   echo "❌ Unsupported file format: $EXT"
+  exit 1
+fi
+
+if [ ! -s "$TMP_RESUME" ]; then
+  echo "❌ Extraction failed: Resulting file is empty"
   exit 1
 fi
 
@@ -96,7 +115,7 @@ PROMPT=$(jq -rn \
   --arg resume "$RES_CONTENT" \
   --arg jd "$JD_CONTENT" \
   --arg template "$PROMPT_TEMPLATE" \
-  '$template | sub("\\{\\{RESUME\\}\\}"; $resume) | sub("\\{\\{JD\\}\\}"; $jd)')
+  '$template | gsub("{{RESUME}}"; $resume) | gsub("{{JD}}"; $jd)')
 
 # Run Ollama
 echo "--~--"
