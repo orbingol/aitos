@@ -56,12 +56,15 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RESUME_DIR="$(cd "$(dirname "$RESUME")" && pwd)"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 BASENAME=$(basename "$RESUME")
-TMP_RESUME="$RESUME_DIR/${BASENAME}_${TIMESTAMP}.txt"
 
 # 1. Extract text
 EXT="${RESUME##*.}"
 
-if [ "$EXT" = "pdf" ]; then
+if [ "$EXT" = "txt" ]; then
+  echo "📄 Using existing text file..."
+  TMP_RESUME="$RESUME"
+elif [ "$EXT" = "pdf" ]; then
+  TMP_RESUME="$RESUME_DIR/${BASENAME}_${TIMESTAMP}.txt"
   if [ "$USE_POPPLER" = true ]; then
     echo "📄 Extracting text from PDF using Poppler..."
     pdftotext "$RESUME" "$TMP_RESUME"
@@ -70,6 +73,7 @@ if [ "$EXT" = "pdf" ]; then
     tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME"
   fi
 elif [ "$EXT" = "docx" ]; then
+  TMP_RESUME="$RESUME_DIR/${BASENAME}_${TIMESTAMP}.txt"
   echo "📄 Extracting text from DOCX using Tika..."
   tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME"
 else
