@@ -2,6 +2,7 @@ FROM phusion/baseimage:noble-1.0.2
 
 # Default environment variables
 ENV TIKA_VERSION=3.2.3
+ENV YQ_VERSION=v4.44.1
 ENV OLLAMA_HOST=http://host.docker.internal:11434
 
 # Install dependencies
@@ -14,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install yq
-RUN curl -fsSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq && \
+RUN curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -o /usr/local/bin/yq && \
     chmod +x /usr/local/bin/yq
 
 # Install Tika App

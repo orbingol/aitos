@@ -39,13 +39,16 @@ chmod +x "$MOCK_BIN_DIR/ollama"
 # Ensure prompts directory has the test model
 mkdir -p "$CLI_DIR/prompts"
 cp "$SCRIPT_DIR/test-model.yaml" "$CLI_DIR/prompts/test-model.yaml"
+# Create a dummy prompt file for the failure test to ensure we reach the ollama command
+cp "$SCRIPT_DIR/test-model.yaml" "$CLI_DIR/prompts/fail-model.yaml"
 
 # Cleanup function
 cleanup() {
     rm -f "$FIXTURES_DIR"/*.pdf "$FIXTURES_DIR"/*.txt_*
     rm -rf "$MOCK_BIN_DIR"
     rm -f "$CLI_DIR/prompts/test-model.yaml"
-    rm -f test1_out.txt test2_out.txt test5_out.txt
+    rm -f "$CLI_DIR/prompts/fail-model.yaml"
+    rm -f "$SCRIPT_DIR/test1_out.txt" "$SCRIPT_DIR/test2_out.txt" "$SCRIPT_DIR/test5_out.txt"
 }
 trap cleanup EXIT
 
@@ -54,8 +57,8 @@ export PATH="$MOCK_BIN_DIR:$PATH"
 
 # Test 1: Verification of basic run
 echo "Running Test 1: Basic execution..."
-"$CLI_DIR/aitos.sh" "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt" test-model > test1_out.txt
-if grep -q "Parsing clarity" test1_out.txt && grep -q "status" test1_out.txt; then
+"$CLI_DIR/aitos.sh" "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt" test-model > "$SCRIPT_DIR/test1_out.txt"
+if grep -q "Parsing clarity" "$SCRIPT_DIR/test1_out.txt" && grep -q "status" "$SCRIPT_DIR/test1_out.txt"; then
     echo "✅ Test 1 Passed"
 else
     echo "❌ Test 1 Failed: Output missing expected content"
@@ -64,8 +67,8 @@ fi
 
 # Test 2: Verification of --text-only filter
 echo "Running Test 2: Text-only filter..."
-"$CLI_DIR/aitos.sh" --text-only "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt" test-model > test2_out.txt
-if grep -q "Parsing clarity" test2_out.txt && ! grep -q "status" test2_out.txt; then
+"$CLI_DIR/aitos.sh" --text-only "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt" test-model > "$SCRIPT_DIR/test2_out.txt"
+if grep -q "Parsing clarity" "$SCRIPT_DIR/test2_out.txt" && ! grep -q "status" "$SCRIPT_DIR/test2_out.txt"; then
     echo "✅ Test 2 Passed"
 else
     echo "❌ Test 2 Failed: Output filtering failed"
@@ -93,8 +96,8 @@ fi
 # Test 5: Verify PDF extraction (if PDF exists)
 if [ -f "$FIXTURES_DIR/resume.pdf" ]; then
     echo "Running Test 5: PDF extraction..."
-    "$CLI_DIR/aitos.sh" --text-only "$FIXTURES_DIR/resume.pdf" "$FIXTURES_DIR/job.txt" test-model > test5_out.txt
-    if grep -q "Parsing clarity" test5_out.txt; then
+    "$CLI_DIR/aitos.sh" --text-only "$FIXTURES_DIR/resume.pdf" "$FIXTURES_DIR/job.txt" test-model > "$SCRIPT_DIR/test5_out.txt"
+    if grep -q "Parsing clarity" "$SCRIPT_DIR/test5_out.txt"; then
         echo "✅ Test 5 Passed: PDF text extracted and filtered"
     else
         echo "❌ Test 5 Failed: PDF extraction failed"
