@@ -23,7 +23,8 @@ Install required dependencies via Homebrew (macOS):
 brew install tika          # Document text extraction
 brew install poppler       # Alternative PDF processing (optional)
 brew install ollama-app    # AI model runtime
-brew install jq            # JSON processing (recommended)
+brew install jq            # JSON processing
+brew install yq            # YAML processing (required for prompts)
 
 # Pull required AI models
 ollama pull gemma3:latest
@@ -54,22 +55,43 @@ For other platforms, install equivalent packages:
 ### Options
 
 - `--poppler`: Use Poppler (pdftotext) instead of Tika for PDF extraction
+- `--text-only`: Filter out the JSON data and only display the human-readable report
 
 ### Examples
 
 ```bash
-# Basic analysis with Gemma3 model
-./aitos.sh resume.pdf job_description.txt gemma3
+# Basic analysis (shows full output including JSON)
+./aitos.sh resume.pdf job.txt gemma3
 
-# Analysis with Qwen3 model using Poppler for PDF processing
-./aitos.sh --poppler resume.pdf job_description.txt qwen3
+# Show only the human-readable report
+./aitos.sh --text-only resume.pdf job.txt gemma3
 
-# Analysis with GPT-OSS model
-./aitos.sh resume.docx job_description.txt gpt-oss
+# Use Poppler for PDF processing
+./aitos.sh --poppler resume.pdf job.txt qwen3
 
-# Make script executable (first time only)
+# Make script executable (if needed)
 chmod +x aitos.sh
 ```
+
+## Docker Support
+
+You can run the CLI tool using Docker to avoid local dependency issues.
+
+### Build
+
+```bash
+docker build -t aitos-cli -f docker/Dockerfile .
+```
+
+### Run
+
+Mount your local files as a volume to the container:
+
+```bash
+docker run --rm -v $(pwd):/data aitos-cli /data/resume.pdf /data/job.txt gemma3
+```
+
+*Note: The container connects to Ollama on the host via `http://host.docker.internal:11434` by default.*
 
 ## Output
 
@@ -193,10 +215,10 @@ file resume.pdf
 
 ## File Management
 
-The script creates temporary files in the CLI directory:
-- Pattern: `{filename}_{timestamp}.txt`
-- Contains extracted text for AI analysis
-- Automatically timestamped to avoid conflicts
+The script creates extracted text files in the same directory as the source resume:
+- Pattern: `{resume_filename}_{timestamp}.txt`
+- Contains the raw text extracted for AI analysis
+- Useful for verifying extraction quality
 - Clean up manually if needed
 
 ## Integration
@@ -216,33 +238,25 @@ done
 ### CI/CD Integration
 The CLI tool can be integrated into automated workflows for resume screening and analysis.
 
-## Advanced Usage
+## Tips & Tricks
 
-### Custom Analysis Pipeline
+### Model Comparison
+To see how different models evaluate the same resume:
 ```bash
-# Extract and save text separately
-tika -t resume.pdf > resume_text.txt
-
-# Run analysis with custom preprocessing
-./aitos.sh resume.pdf job_description.txt gemma3 | jq '.keyword_match_score'
-
-# Compare multiple models
 for model in gemma3 qwen3 gpt-oss; do
-    echo "=== $model ==="
-    ./aitos.sh resume.pdf job_description.txt $model
+    echo "--- $model ---"
+    ./aitos.sh --text-only resume.pdf job.txt $model
 done
 ```
 
-### Output Processing
+### Automation & Extraction
+Since the default output includes JSON, you can use `jq` to extract specific data:
 ```bash
-# Extract only JSON report
+# Save the JSON report to a file
 ./aitos.sh resume.pdf job.txt gemma3 | jq '.' > report.json
 
-# Get specific scores
+# Get only the weighted score
 ./aitos.sh resume.pdf job.txt gemma3 | jq '.weighted_overall_score'
-
-# Save human report only
-./aitos.sh resume.pdf job.txt gemma3 | sed -n '/- Parsing clarity:/,/- Suggested company questions:/p' > human_report.txt
 ```
 
 ## Support
