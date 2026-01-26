@@ -74,17 +74,15 @@ else
     echo "✅ Test 3 Passed"
 fi
 
-# Test 4: Check if extracted txt file is created in the correct location
-echo "Running Test 4: Extracted file location..."
+# Test 4: Verify that no extracted file is created for plain text input
+echo "Running Test 4: No extracted file for plain text input..."
 BASENAME=$(basename "$FIXTURES_DIR/resume.txt")
-EXTRACTED_FILE=$(ls "$FIXTURES_DIR"/${BASENAME}_*.txt | head -n 1)
-if [ -f "$EXTRACTED_FILE" ]; then
-    echo "✅ Test 4 Passed: Extracted file found at $EXTRACTED_FILE"
-else
-    echo "❌ Test 4 Failed: Extracted file not found in resume directory"
+if compgen -G "$FIXTURES_DIR/${BASENAME}_*.txt" > /dev/null; then
+    echo "❌ Test 4 Failed: Unexpected extracted file(s) created for plain text input"
     exit 1
+else
+    echo "✅ Test 4 Passed: No extracted files created for plain text input"
 fi
-
 # Test 5: Verify PDF extraction (if PDF exists)
 if [ -f "$FIXTURES_DIR/resume.pdf" ]; then
     echo "Running Test 5: PDF extraction..."
