@@ -41,7 +41,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Export PATH to use mock ollama
-export PATH="$MOCK_BIN_DIR:\$PATH"
+export PATH="$MOCK_BIN_DIR:$PATH"
 
 # Test 1: Verification of basic run
 echo "Running Test 1: Basic execution..."
