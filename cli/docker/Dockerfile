@@ -18,9 +18,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install yq
 RUN curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -o /usr/local/bin/yq \
-    && curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/checksums -o /tmp/yq_checksums \
-    && grep " yq_linux_amd64" /tmp/yq_checksums | sed "s|yq_linux_amd64|/usr/local/bin/yq|" | sha256sum -c - \
-    && rm /tmp/yq_checksums \
+    && echo "c7a1278e6bbc4924f41b56db838086c39d13ee25dcb22089e7fbf16ac901f0d4  /usr/local/bin/yq" | sha256sum -c - \
     && chmod +x /usr/local/bin/yq
 
 # Install Tika App

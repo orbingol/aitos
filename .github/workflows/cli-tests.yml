@@ -26,12 +26,9 @@ jobs:
         run: |
           YQ_VERSION=v4.50.1
           cd /usr/local/bin
-          sudo curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -o yq_linux_amd64
-          sudo curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/checksums -o yq_checksums
-          grep " yq_linux_amd64" yq_checksums | sudo sha256sum -c -
-          sudo mv yq_linux_amd64 yq
-          sudo rm yq_checksums
-          sudo chmod +x /usr/local/bin/yq
+          sudo curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -o yq
+          echo "c7a1278e6bbc4924f41b56db838086c39d13ee25dcb22089e7fbf16ac901f0d4  yq" | sudo sha256sum -c -
+          sudo chmod +x yq
 
       - name: Install Tika App
         run: |
