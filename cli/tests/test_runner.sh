@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -o pipefail
 
 # AiToS CLI Test Runner
 # This script runs tests for aitos.sh by mocking the ollama binary.
