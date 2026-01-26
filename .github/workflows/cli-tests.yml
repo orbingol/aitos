@@ -25,7 +25,12 @@ jobs:
       - name: Install yq
         run: |
           YQ_VERSION=v4.44.1
-          sudo wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+          cd /usr/local/bin
+          sudo wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O yq_linux_amd64
+          sudo wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64.sha256 -O yq_linux_amd64.sha256
+          sudo sha256sum -c yq_linux_amd64.sha256
+          sudo mv yq_linux_amd64 yq
+          sudo rm yq_linux_amd64.sha256
           sudo chmod +x /usr/local/bin/yq
 
       - name: Install Tika App
