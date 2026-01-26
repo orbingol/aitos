@@ -11,17 +11,17 @@ MOCK_BIN_DIR="$SCRIPT_DIR/mock_bin"
 
 # Setup mock environment
 mkdir -p "$MOCK_BIN_DIR"
-cat <<EOF > "$MOCK_BIN_DIR/ollama"
+cat <<'EOF' > "$MOCK_BIN_DIR/ollama"
 #!/bin/bash
 # Consume stdin and check if it has content
-INPUT=\$(cat)
-if [ -z "\$INPUT" ]; then
+INPUT=$(cat)
+if [ -z "$INPUT" ]; then
     echo "Error: Empty prompt received via stdin" >&2
     exit 1
 fi
 
-if [ "\$1" = "run" ]; then
-    if [ "\$2" = "fail-model" ]; then
+if [ "$1" = "run" ]; then
+    if [ "$2" = "fail-model" ]; then
         echo "Error: simulated failure" >&2
         exit 1
     fi

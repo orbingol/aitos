@@ -20,11 +20,6 @@
 set -e
 set -o pipefail
 
-if [ "$#" -lt 3 ]; then
-  # This check can be performed earlier, but we move it after parsing
-  :
-fi
-
 USE_POPPLER=false
 TEXT_ONLY=false
 
