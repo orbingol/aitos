@@ -37,6 +37,8 @@ cp "$SCRIPT_DIR/test-model.yaml" "$CLI_DIR/prompts/test-model.yaml"
 cleanup() {
     rm -f "$FIXTURES_DIR"/*.pdf "$FIXTURES_DIR"/*.txt_*
     rm -rf "$MOCK_BIN_DIR"
+    rm -f "$CLI_DIR/prompts/test-model.yaml"
+    rm -f test1_out.txt test2_out.txt test5_out.txt
 }
 trap cleanup EXIT
 
