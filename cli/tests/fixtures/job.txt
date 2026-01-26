@@ -1,0 +1,5 @@
+We are looking for a Software Engineer with:
+- Strong experience in Python or Java
+- Knowledge of Docker and cloud platforms (AWS/GCP)
+- 3+ years of experience
+- Degree in CS or related field
