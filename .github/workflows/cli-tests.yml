@@ -34,7 +34,7 @@ jobs:
           cd /usr/local/bin
           sudo wget https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar -O tika-app.jar
           sudo wget https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar.sha512 -O tika-app.jar.sha512
-          sudo sha512sum -c tika-app.jar.sha512
+          echo "$(cat tika-app.jar.sha512)  tika-app.jar" | sudo sha512sum -c -
           sudo rm tika-app.jar.sha512
           echo '#!/bin/bash' | sudo tee /usr/local/bin/tika
           echo 'java -jar /usr/local/bin/tika-app.jar "$@"' | sudo tee -a /usr/local/bin/tika

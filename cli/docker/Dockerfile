@@ -20,6 +20,9 @@ RUN curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/y
 
 # Install Tika App
 RUN curl -fsSL https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar -o /usr/local/bin/tika-app.jar \
+    && curl -fsSL https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar.sha512 -o /tmp/tika-app.jar.sha512 \
+    && echo "$(cat /tmp/tika-app.jar.sha512)  /usr/local/bin/tika-app.jar" | sha512sum -c - \
+    && rm /tmp/tika-app.jar.sha512 \
     && echo '#!/bin/bash\njava -jar /usr/local/bin/tika-app.jar "$@"' > /usr/local/bin/tika \
     && chmod +x /usr/local/bin/tika
 
