@@ -36,7 +36,7 @@ For other platforms, install equivalent packages:
 - **Tika**: Apache Tika command-line tool
 - **Poppler**: PDF processing utilities (pdftotext)
 - **Ollama**: Local AI model runtime
-- **jq**: JSON command-line processor (optional, for pretty-printing)
+- **jq**: JSON command-line processor (required for prompt construction)
 
 ## Usage
 
@@ -80,7 +80,7 @@ You can run the CLI tool using Docker to avoid local dependency issues.
 ### Build
 
 ```bash
-docker build -t aitos-cli -f docker/Dockerfile .
+docker build -t aitos -f docker/Dockerfile .
 ```
 
 ### Run
@@ -88,7 +88,7 @@ docker build -t aitos-cli -f docker/Dockerfile .
 Mount your local files as a volume to the container:
 
 ```bash
-docker run --rm -v $(pwd):/data aitos-cli /data/resume.pdf /data/job.txt gemma3
+docker run --rm -v $(pwd):/data aitos /data/resume.pdf /data/job.txt gemma3
 ```
 
 *Note: The container connects to Ollama on the host via `http://host.docker.internal:11434` by default.*
