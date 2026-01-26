@@ -1,0 +1,46 @@
+name: CLI Tests
+
+on:
+  push:
+    paths:
+      - 'cli/**'
+      - '.github/workflows/cli-tests.yml'
+  pull_request:
+    paths:
+      - 'cli/**'
+      - '.github/workflows/cli-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jre-headless poppler-utils enscript ghostscript jq
+
+      - name: Install yq
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Install Tika App
+        run: |
+          TIKA_VERSION=3.2.3
+          sudo wget https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar -O /usr/local/bin/tika-app.jar
+          echo '#!/bin/bash' | sudo tee /usr/local/bin/tika
+          echo 'java -jar /usr/local/bin/tika-app.jar "$@"' | sudo tee -a /usr/local/bin/tika
+          sudo chmod +x /usr/local/bin/tika
+
+      - name: Generate PDF fixture
+        run: |
+          enscript --output=- cli/tests/fixtures/resume.txt | ps2pdf - cli/tests/fixtures/resume.pdf
+
+      - name: Run Tests
+        run: |
+          chmod +x cli/tests/test_runner.sh
+          chmod +x cli/aitos.sh
+          cd cli/tests && ./test_runner.sh

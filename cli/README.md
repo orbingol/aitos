@@ -240,6 +240,15 @@ The CLI tool can be integrated into automated workflows for resume screening and
 
 ## Tips & Tricks
 
+### Development & Testing
+You can run the local test suite to verify script logic without requiring a full Ollama setup:
+```bash
+# From the cli directory
+chmod +x tests/test_runner.sh
+./tests/test_runner.sh
+```
+This script tests extraction logic, prompt generation, and output filtering using a mock Ollama binary.
+
 ### Model Comparison
 To see how different models evaluate the same resume:
 ```bash
