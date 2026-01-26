@@ -3,10 +3,12 @@ FROM phusion/baseimage:noble-1.0.2
 # Default environment variables
 ENV TIKA_VERSION=3.2.3
 ENV YQ_VERSION=v4.44.1
+ENV OLLAMA_VERSION=0.15.1
 ENV OLLAMA_HOST=http://host.docker.internal:11434
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
+        ca-certificates \
         openjdk-17-jre-headless \
         poppler-utils \
         jq \
@@ -15,8 +17,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install yq
-RUN curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -o /usr/local/bin/yq && \
-    chmod +x /usr/local/bin/yq
+RUN curl -fsSL https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -o /usr/local/bin/yq \
+    && echo "6dc2d0cd4e0caca5aeffd0d784a48263591080e4a0895abe69f3a76eb50d1ba3  /usr/local/bin/yq" | sha256sum -c - \
+    && chmod +x /usr/local/bin/yq
 
 # Install Tika App
 RUN curl -fsSL https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${TIKA_VERSION}.jar -o /usr/local/bin/tika-app.jar \
@@ -27,9 +30,11 @@ RUN curl -fsSL https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-app-${T
     && chmod +x /usr/local/bin/tika
 
 # Install Ollama CLI
-RUN curl -fsSL https://ollama.com/install.sh -o /tmp/ollama-install.sh \
-    && sh /tmp/ollama-install.sh \
-    && rm /tmp/ollama-install.sh
+RUN curl -fsSL https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tar.zst -o /tmp/ollama-linux-amd64.tar.zst \
+    && curl -fsSL https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/sha256sum.txt -o /tmp/sha256sum.txt \
+    && cd /tmp && grep "ollama-linux-amd64.tar.zst" sha256sum.txt | sha256sum -c - \
+    && tar -C /usr/local -xaf /tmp/ollama-linux-amd64.tar.zst \
+    && rm /tmp/ollama-linux-amd64.tar.zst /tmp/sha256sum.txt
 
 # Set up application directory
 WORKDIR /app
