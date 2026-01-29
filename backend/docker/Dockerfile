@@ -22,7 +22,7 @@ RUN yarn install --mode=skip-build
 
 # Generate Prisma client for the current platform
 COPY prisma ./prisma/
-RUN yarn dlx prisma generate
+RUN yarn prisma generate
 
 COPY src ./src/
 COPY openapi.yaml ./

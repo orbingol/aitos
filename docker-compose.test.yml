@@ -1,0 +1,18 @@
+services:
+  backend:
+    volumes:
+      - ./backend/tests:/app/tests
+      - ./backend/jest.config.js:/app/jest.config.js
+
+  ollama:
+    build:
+      context: ./backend/tests/mock_ollama
+    image: aitos-mock-ollama
+    volumes: []
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "node", "-e", "http.get('http://localhost:11434/api/tags', (r) => { if (r.statusCode === 200) process.exit(0); else process.exit(1); })"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

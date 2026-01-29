@@ -3,7 +3,7 @@ import { exec } from 'child_process';
 import fs from 'fs/promises';
 
 const useTika = process.env.TIKA_ENABLE || true; // Always use Tika since it's available as a separate service
-const TIKA_URL = process.env.TIKA_URL || 'http:/localhost:9998'; // External Tika service
+const TIKA_URL = process.env.TIKA_URL || 'http://tika:9998'; // External Tika service
 
 export async function extractTextFromFile(filePath, originalName) {
   const ext = (originalName.split('.').pop() || '').toLowerCase();

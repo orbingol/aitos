@@ -12,7 +12,8 @@ export async function runOllama(model, prompt) {
     console.log(`Running Ollama with model: ${model}`);
     console.log(`Prompt length: ${prompt.length} characters`);
 
-    const response = await fetch('http://ollama:11434/api/generate', {
+    const ollamaUrl = process.env.OLLAMA_URL || 'http://ollama:11434';
+    const response = await fetch(`${ollamaUrl}/api/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
