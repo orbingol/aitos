@@ -2,9 +2,13 @@ import request from 'supertest';
 import app from '../src/index.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ensureResumePdfFixture } from './utils/pdfFixture.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const resumePdfPath = path.join(__dirname, 'fixtures', 'resume.pdf');
+
+beforeAll(() => ensureResumePdfFixture(resumePdfPath));
 
 describe('CV API', () => {
   it('should return an empty list of CVs initially', async () => {
@@ -15,7 +19,7 @@ describe('CV API', () => {
   });
 
   it('should upload a CV and create a database entry', async () => {
-    const filePath = path.join(__dirname, 'fixtures/resume.pdf');
+    const filePath = resumePdfPath;
 
     const response = await request(app)
       .post('/api/cv')

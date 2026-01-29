@@ -2,14 +2,18 @@ import request from 'supertest';
 import app from '../src/index.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ensureResumePdfFixture } from './utils/pdfFixture.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const resumePdfPath = path.join(__dirname, 'fixtures', 'resume.pdf');
+
+beforeAll(() => ensureResumePdfFixture(resumePdfPath));
 
 describe('Analysis API', () => {
   it('should take a CV and JD and return a report', async () => {
     // 1. Upload a CV first
-    const cvPath = path.join(__dirname, 'fixtures/resume.pdf');
+    const cvPath = resumePdfPath;
     const cvRes = await request(app)
       .post('/api/cv')
       .attach('file', cvPath);
