@@ -233,6 +233,30 @@ Supported Ollama models for analysis:
 - **qwen3**: Alibaba's Qwen 3 model (balanced performance)
 - **gpt-oss**: Open-source GPT variant (comprehensive analysis)
 
+## Testing
+
+- **Containerized smoke & coverage run** (uses mock Ollama + real stack):
+  ```bash
+  ./run-tests.sh
+  ```
+  This script combines `docker-compose.yml` with `docker-compose.test.yml`, waits for backend/ollama health endpoints, and then runs `yarn test:coverage` inside the backend and frontend containers while cleaning up afterward. Use it in CI or when you want reproducible coverage reports.
+- **Backend unit tests** (Jest/Prisma):
+  ```bash
+  cd backend
+  yarn test
+  yarn test:coverage
+  ```
+  Ensure `NODE_ENV=test` is set when needed; the Jest config already maps `.js` modules and enables in-band execution for compatibility with SQLite.
+- **Frontend unit tests** (Vitest/UI):
+  ```bash
+  cd frontend
+  yarn test
+  yarn test:coverage
+  ```
+  The Vitest config uses `jsdom` and outputs `text/json/html` coverage via V8.
+
+GitHub Actions now runs the `App Tests` workflow on pushes or pull requests that touch the backend, frontend, or the compose/scripts controlling this test suite, so the coverage run is automated for mainline changes.
+
 Install models using:
 ```bash
 ollama pull gemma3:latest
