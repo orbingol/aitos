@@ -27,6 +27,17 @@ yarn dev
 
 Runs on `http://localhost:3001` and connects to backend on port 3000.
 
+## Testing
+
+- **Vitest** (unit/DOM specs):
+  ```bash
+  yarn test
+  yarn test:coverage
+  ```
+  Vitest runs in `jsdom` and produces `text/json/html` coverage via the V8 provider. Each spec lives alongside its implementation under `src/`.
+
+See `./run-tests.sh` for a containerized flow that runs both backend and frontend coverage inside Docker, which is also the target of the `.github/workflows/app-tests.yml` workflow.
+
 ## Main Components
 
 - **Dashboard**: Overview and navigation

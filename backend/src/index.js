@@ -10,6 +10,7 @@ import jdRoutes from './routes/jdRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import analyzeRoutes from './routes/analyze.js';
 import ollamaRoutes from './routes/ollama.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
@@ -32,7 +33,7 @@ const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'tmp', 
 app.use('/uploads', express.static(uploadsDir));
 
 // Health
-app.get('/health', (_req, res) => res.json({ ok: true }));
+app.use('/health', healthRoutes);
 
 // Routes
 app.use('/api/cv', cvRoutes);
@@ -42,4 +43,9 @@ app.use('/api', analyzeRoutes); // /analyze
 app.use('/api/ollama', ollamaRoutes);
 
 const BACKEND_PORT = process.env.BACKEND_PORT || 3000;
-app.listen(BACKEND_PORT, () => console.log(`🚀 Server listening on port ${BACKEND_PORT}`));
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(BACKEND_PORT, () => console.log(`🚀 Server listening on port ${BACKEND_PORT}`));
+}
+
+export default app;

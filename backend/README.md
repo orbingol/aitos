@@ -24,6 +24,16 @@ yarn dev
 
 Runs on `http://localhost:3000` with Swagger UI documentation.
 
+## Testing
+
+- **Jest unit tests**:
+  ```bash
+  yarn test
+  yarn test:coverage
+  ```
+  The scripts set `NODE_OPTIONS=--experimental-vm-modules` so Jest can run under the current ESM build. Use the `backend/tests` folder for fixture-based coverage.
+- **Integrated/coverage run (mock Ollama)**: from the repo root run `./run-tests.sh`, which starts the full Docker stack with `docker-compose.yml` + `docker-compose.test.yml`, waits for healthy backend/OLLAMA endpoints, and runs the backend (`yarn test:coverage`) before continuing with the frontend coverage.
+
 ## Key API Endpoints
 
 - **CVs**: `POST/GET/PUT/DELETE /api/cv` - Resume management

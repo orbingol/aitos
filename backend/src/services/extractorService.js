@@ -1,9 +1,11 @@
 import mammoth from 'mammoth';
-import { exec } from 'child_process';
 import fs from 'fs/promises';
 
-const useTika = process.env.TIKA_ENABLE || true; // Always use Tika since it's available as a separate service
-const TIKA_URL = process.env.TIKA_URL || 'http:/localhost:9998'; // External Tika service
+const useTika = typeof process.env.TIKA_ENABLE === 'string'
+  ? process.env.TIKA_ENABLE.toLowerCase() === 'true'
+  : true;
+const TIKA_URL = process.env.TIKA_URL || 'http://tika:9998';
+const TIKA_TIMEOUT_MS = Number(process.env.TIKA_TIMEOUT_MS) || 10_000;
 
 export async function extractTextFromFile(filePath, originalName) {
   const ext = (originalName.split('.').pop() || '').toLowerCase();
@@ -24,37 +26,47 @@ export async function extractTextFromFile(filePath, originalName) {
     return value || '';
   }
 
-  // Fallback to Tika if available
+  if (!useTika) {
+    throw new Error(`Unsupported file type: ${ext}. Enable Tika or upload PDF/DOCX.`);
+  }
+
   try {
     return await runTikaServer(filePath);
   } catch (e) {
-    throw new Error(`Unsupported file type: ${ext}. Install Tika or upload PDF/DOCX.`);
+    throw new Error(`Tika extraction failed: ${e.message}`);
   }
 }
 
 async function runTikaServer(filePath) {
-  const formData = new FormData();
   const fileBuffer = await fs.readFile(filePath);
-  formData.append('file', new Blob([fileBuffer]));
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIKA_TIMEOUT_MS);
 
-  const response = await fetch(`${TIKA_URL}/tika`, {
-    method: 'PUT',
-    headers: {
-      'Accept': 'text/plain',
-    },
-    body: fileBuffer
-  });
+  try {
+    const response = await fetch(`${TIKA_URL}/tika`, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'text/plain',
+        'Content-Type': 'application/octet-stream',
+      },
+      body: fileBuffer,
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    throw new Error(`Tika server error: ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(`Tika server error: ${response.statusText}`);
+    }
+
+    const text = await response.text();
+    return cleanAndFormatText(text);
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Tika request timed out');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  let text = await response.text();
-
-  // Clean up and format the text properly
-  text = cleanAndFormatText(text);
-
-  return text;
 }
 
 function cleanAndFormatText(text) {
