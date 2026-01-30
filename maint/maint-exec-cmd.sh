@@ -1,9 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+printf 'Updating npm to the latest version...\n'
+npm install -g npm@latest >/tmp/npm-update.log 2>&1 || true
+
 corepack enable || true
 corepack prepare yarn@4.9.4 --activate
-
 MAINT_CMD="${MAINT_CMD:-yarn install}"
 
 # Basic validation to avoid executing arbitrary shell syntax via MAINT_CMD.
