@@ -8,3 +8,4 @@ services:
     environment:
       - NODE_ENV=development
       - YARN_ENABLE_TELEMETRY=0
+      - MAINT_CMD
