@@ -1,0 +1,11 @@
+services:
+  yarn-update:
+    image: node:22-slim
+    working_dir: /app
+    command: ./maint/maint-exec-cmd.sh
+    volumes:
+      - .:/app
+    environment:
+      - NODE_ENV=development
+      - YARN_ENABLE_TELEMETRY=0
+      - MAINT_CMD
