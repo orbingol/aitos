@@ -61,8 +61,8 @@ if [ "$#" -lt 2 ]; then
   echo "Example with story: $0 --story story.txt ./data target_job.txt"
   echo "Example with custom prompt: $0 --prompt my-prompt.yaml ./data target_job.txt"
   echo ""
-  echo "data_dir must contain pairs: cv1.pdf + job1.txt, cv2.pdf + job2.txt, ..."
-  echo "CV files may be .pdf, .docx, or .txt"
+  echo "data_dir must contain pairs: cv1.* + job1.*, cv2.* + job2.*, ..."
+  echo "CV and job files may be .pdf, .docx, or .txt"
   echo "Default prompt: cv-builder.yaml (model and tag configured inside the YAML)"
   exit 1
 fi
@@ -162,8 +162,16 @@ EXAMPLES=""
 PAIR_COUNT=0
 
 for i in $(seq 1 999); do
-  JOB_FILE="$DATA_DIR/job${i}.txt"
-  [ -f "$JOB_FILE" ] || break   # stop at the first gap
+  JOB_FILE=""
+  for ext in txt pdf docx; do
+    candidate="$DATA_DIR/job${i}.${ext}"
+    if [ -f "$candidate" ]; then
+      JOB_FILE="$candidate"
+      break
+    fi
+  done
+
+  [ -n "$JOB_FILE" ] || break   # stop at the first gap
 
   CV_FILE=""
   for ext in pdf docx txt; do
@@ -175,7 +183,7 @@ for i in $(seq 1 999); do
   done
 
   if [ -z "$CV_FILE" ]; then
-    echo "⚠️  job${i}.txt found but no matching cv${i}.pdf/docx/txt — skipping"
+    echo "⚠️  $(basename "$JOB_FILE") found but no matching cv${i}.pdf/docx/txt — skipping"
     continue
   fi
 
@@ -201,7 +209,7 @@ done
 
 if [ "$PAIR_COUNT" -eq 0 ]; then
   echo "❌ No cv+job pairs found in: $DATA_DIR"
-  echo "   Expected files: cv1.pdf (or .docx/.txt) + job1.txt, cv2.pdf + job2.txt, ..."
+  echo "   Expected files: cv1.(pdf|docx|txt) + job1.(pdf|docx|txt), cv2.* + job2.*, ..."
   exit 1
 fi
 
