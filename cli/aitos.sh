@@ -44,7 +44,7 @@ if [ "$#" -lt 3 ]; then
   echo "Usage: $0 [--poppler] [--text-only] <resume.pdf/docx/txt> <job_description.txt> <model>"
   echo "Example: $0 resume.pdf job.txt gemma3"
   echo "Example with Poppler and Text-only: $0 --poppler --text-only resume.pdf job.txt qwen3"
-  echo "Available models: gemma3, qwen3, gpt-oss"
+  echo "Available models: gemma3 gemma4, qwen3, gpt-oss"
   exit 1
 fi
 
@@ -99,13 +99,20 @@ fi
 echo "✅ Extracted text saved to: $TMP_RESUME"
 
 # 2. Run Ollama with working prompt
-echo "🤖 Running ATS analysis with model: $MODEL"
-
 PROMPT_FILE="$SCRIPT_DIR/prompts/$MODEL.yaml"
 if [ ! -f "$PROMPT_FILE" ]; then
   echo "❌ Prompt file not found: $PROMPT_FILE"
   exit 1
 fi
+
+OLLAMA_MODEL_NAME=$(yq -r '.model // ""' "$PROMPT_FILE")
+OLLAMA_MODEL_TAG=$(yq -r '.tag // "latest"' "$PROMPT_FILE")
+if [ -z "$OLLAMA_MODEL_NAME" ]; then
+  OLLAMA_MODEL_NAME="$MODEL"
+fi
+OLLAMA_MODEL="${OLLAMA_MODEL_NAME}:${OLLAMA_MODEL_TAG}"
+
+echo "🤖 Running ATS analysis with model: $OLLAMA_MODEL"
 
 PROMPT_TEMPLATE=$(yq -r '.prompt' "$PROMPT_FILE")
 RES_CONTENT=$(cat "$TMP_RESUME")
@@ -122,10 +129,10 @@ echo "--~--"
 echo ""
 if [ "$TEXT_ONLY" = true ]; then
   # Filter out the JSON part and only show the human-readable report
-  ollama run "$MODEL" <<< "$PROMPT" | awk '/^- Parsing clarity:/ {print_it=1} print_it'
+  ollama run "$OLLAMA_MODEL" <<< "$PROMPT" | awk '/^- Parsing clarity:/ {print_it=1} print_it'
 else
   # Show full output including JSON
-  ollama run "$MODEL" <<< "$PROMPT"
+  ollama run "$OLLAMA_MODEL" <<< "$PROMPT"
 fi
 echo ""
 echo "--~--"
