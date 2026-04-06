@@ -191,8 +191,12 @@ for i in $(seq 1 999); do
   TMP_CV="$TMP_DIR/cv${i}.txt"
   extract_cv "$CV_FILE" "$TMP_CV"
 
+  echo "📄 Extracting Job $i: $(basename "$JOB_FILE")"
+  TMP_JOB="$TMP_DIR/job${i}.txt"
+  extract_job_description "$JOB_FILE" "$TMP_JOB"
+
   CV_TEXT=$(cat "$TMP_CV")
-  JOB_TEXT=$(cat "$JOB_FILE")
+  JOB_TEXT=$(cat "$TMP_JOB")
 
   EXAMPLES="${EXAMPLES}
 === EXAMPLE ${i} ===
@@ -248,6 +252,7 @@ OLLAMA_MODEL="${OLLAMA_MODEL_NAME}:${OLLAMA_MODEL_TAG}"
 
 PROMPT_TEMPLATE=$(yq -r '.prompt' "$PROMPT_FILE")
 TARGET_JD_TEXT="$TMP_DIR/target_job.txt"
+echo "📄 Extracting target job description: $(basename "$TARGET_JD")"
 extract_job_description "$TARGET_JD" "$TARGET_JD_TEXT"
 TARGET_JD_CONTENT=$(cat "$TARGET_JD_TEXT")
 
