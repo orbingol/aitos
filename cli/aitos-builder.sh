@@ -17,10 +17,11 @@
 #  * brew install ollama-app tika poppler jq yq
 #
 # Usage:
-#  ./aitos-builder.sh [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt>
+#  ./aitos-builder.sh [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt/pdf/docx>
 #
 # Example:
 #  ./aitos-builder.sh ./data target_job.txt
+#  ./aitos-builder.sh ./data target_job.pdf
 #  ./aitos-builder.sh --story story.txt ./data target_job.txt
 #  ./aitos-builder.sh --prompt my-prompt.yaml --story story.txt ./data target_job.txt
 #  ./aitos-builder.sh --poppler --prompt my-prompt.yaml ./data target_job.txt
@@ -54,8 +55,9 @@ while [[ "$1" == --* ]]; do
 done
 
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt>"
+  echo "Usage: $0 [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt/pdf/docx>"
   echo "Example: $0 ./data target_job.txt"
+  echo "Example with PDF target job: $0 ./data target_job.pdf"
   echo "Example with story: $0 --story story.txt ./data target_job.txt"
   echo "Example with custom prompt: $0 --prompt my-prompt.yaml ./data target_job.txt"
   echo ""
@@ -118,6 +120,38 @@ extract_cv() {
 
   if [ ! -s "$dest" ]; then
     echo "❌ Extraction produced an empty file for: $src"
+    exit 1
+  fi
+}
+
+extract_job_description() {
+  local src="$1"
+  local dest="$2"
+  local ext="${src##*.}"
+
+  case "$ext" in
+    txt)
+      cp "$src" "$dest"
+      ;;
+    pdf)
+      if [ "$USE_POPPLER" = true ]; then
+        pdftotext "$src" "$dest" || { echo "❌ Target job PDF extraction failed for $src"; exit 1; }
+      else
+        tika -t "$src" 2>/dev/null > "$dest" || { echo "❌ Target job PDF extraction failed for $src"; exit 1; }
+      fi
+      ;;
+    docx)
+      tika -t "$src" 2>/dev/null > "$dest" || { echo "❌ Target job DOCX extraction failed for $src"; exit 1; }
+      ;;
+    *)
+      echo "❌ Unsupported target job format: $src"
+      echo "   Supported formats: .txt, .pdf, .docx"
+      exit 1
+      ;;
+  esac
+
+  if [ ! -s "$dest" ]; then
+    echo "❌ Target job extraction produced an empty file for: $src"
     exit 1
   fi
 }
@@ -205,7 +239,9 @@ fi
 OLLAMA_MODEL="${OLLAMA_MODEL_NAME}:${OLLAMA_MODEL_TAG}"
 
 PROMPT_TEMPLATE=$(yq -r '.prompt' "$PROMPT_FILE")
-TARGET_JD_CONTENT=$(cat "$TARGET_JD")
+TARGET_JD_TEXT="$TMP_DIR/target_job.txt"
+extract_job_description "$TARGET_JD" "$TARGET_JD_TEXT"
+TARGET_JD_CONTENT=$(cat "$TARGET_JD_TEXT")
 
 if [ -n "$STORY_FILE" ]; then
   STORY_CONTENT=$(cat "$STORY_FILE")
