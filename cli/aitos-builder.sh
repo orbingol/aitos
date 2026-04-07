@@ -1,20 +1,17 @@
 #!/bin/bash
 
-# aitos-builder.sh — CV builder from examples
+# aitos-builder.sh — Builds a CV for a target job description using the provided user data.
 #
 # Given a data directory containing cv1.pdf/cv2.pdf/... and job1.txt/job2.txt/...
 # pairs, and a separate target job description, this script asks an LLM to
 # synthesise a new CV tailored to the target role.
 #
-# Optionally accepts a story file (--story) in plain text describing what the
-# candidate did at each past job, how they delivered, and their achievements.
-# Expected structure (repeat for each job):
-#   Job A - Job description
-#   Job A - How I delivered
-#   Job A - My success stories
+# Optionally accepts a story file (--story) in plain text. This can be used to provide
+# additional context or instructions to the model, which may be relevant for CV tailoring.
 #
-# Install prerequisites (same as aitos.sh):
+# Install prerequisites:
 #  * brew install ollama-app tika poppler jq yq
+#  * or check your OS package manager for installation of the above tools
 #
 # Usage:
 #  ./aitos-builder.sh [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt/pdf/docx>
@@ -63,7 +60,7 @@ if [ "$#" -lt 2 ]; then
   echo ""
   echo "data_dir must contain pairs: cv1.* + job1.*, cv2.* + job2.*, ..."
   echo "CV and job files may be .pdf, .docx, or .txt"
-  echo "Default prompt: cv-builder.yaml (model and tag configured inside the YAML)"
+  echo "Default prompt: cv-builder-default.yaml (model and tag configured inside the YAML)"
   exit 1
 fi
 
@@ -282,7 +279,7 @@ if [ -n "$PROMPT_OVERRIDE" ]; then
     exit 1
   fi
 else
-  PROMPT_FILE="$SCRIPT_DIR/prompts/cv-builder.yaml"
+  PROMPT_FILE="$SCRIPT_DIR/prompts/cv-builder-default.yaml"
 fi
 
 if [ ! -f "$PROMPT_FILE" ]; then

@@ -1,27 +1,36 @@
 #!/bin/bash
 
-# Install Ollama:
-#  * brew install ollama-app
-#  * or visit https://ollama.com/download
+# aitos-analyzer.sh — Generates ATS-like reports for a given CV against a target job description.
 #
-# Download models:
-#  * ollama pull gpt-oss:latest
-#  * ollama pull gemma3:latest
-#  * ollama pull qwen3:latest
+# Analyze a resume against a target job description and produce both a JSON
+# ATS-style report and a human-readable summary.
 #
-# Use script on your local machine:
-#  * brew install tika poppler jq yq
+# Supports plain text, PDF, and DOCX resume input. PDF extraction can use
+# Apache Tika by default or Poppler with --poppler.
+#
+# Install prerequisites:
+#  * brew install ollama-app tika poppler jq yq
 #  * or check your OS package manager for installation of the above tools
+#
+# Usage:
+#  ./aitos-analyzer.sh [--poppler] [--text-only] [--prompt <prompt.yaml>] <resume.pdf/docx/txt> <job_description.txt>
+#
+# Example:
+#  ./aitos-analyzer.sh resume.pdf job.txt
+#  ./aitos-analyzer.sh --text-only resume.pdf job.txt
+#  ./aitos-analyzer.sh --prompt prompts/cv-analyzer-qwen.yaml resume.pdf job.txt
+#  ./aitos-analyzer.sh --poppler resume.pdf job.txt
 #
 # Build a container image and run (optional):
 #  * docker build -t aitos -f docker/Dockerfile .
-#  * docker run -v $(pwd):/data aitos /data/resume.pdf /data/job.txt gemma3
+#  * docker run -v $(pwd):/data aitos /data/resume.pdf /data/job.txt
 
 set -e
 set -o pipefail
 
 USE_POPPLER=false
 TEXT_ONLY=false
+PROMPT_OVERRIDE=""
 
 while [[ "$1" == --* ]]; do
   case "$1" in
@@ -33,6 +42,14 @@ while [[ "$1" == --* ]]; do
       TEXT_ONLY=true
       shift
       ;;
+    --prompt)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --prompt"
+        exit 1
+      fi
+      PROMPT_OVERRIDE="$2"
+      shift 2
+      ;;
     *)
       echo "Unknown option: $1"
       exit 1
@@ -40,17 +57,16 @@ while [[ "$1" == --* ]]; do
   esac
 done
 
-if [ "$#" -lt 3 ]; then
-  echo "Usage: $0 [--poppler] [--text-only] <resume.pdf/docx/txt> <job_description.txt> <model>"
-  echo "Example: $0 resume.pdf job.txt gemma3"
-  echo "Example with Poppler and Text-only: $0 --poppler --text-only resume.pdf job.txt qwen3"
-  echo "Available models: gemma3 gemma4, qwen3, gpt-oss"
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] <resume.pdf/docx/txt> <job_description.txt>"
+  echo "Example: $0 resume.pdf job.txt"
+  echo "Example with custom prompt: $0 --prompt prompts/qwen3.yaml resume.pdf job.txt"
+  echo "Default prompt: prompts/cv-analyzer-default.yaml"
   exit 1
 fi
 
 RESUME=$1
 JD=$2
-MODEL=$3
 
 if [ ! -f "$RESUME" ]; then
   echo "❌ Resume file not found: $RESUME"
@@ -99,7 +115,18 @@ fi
 echo "✅ Extracted text saved to: $TMP_RESUME"
 
 # 2. Run Ollama with working prompt
-PROMPT_FILE="$SCRIPT_DIR/prompts/$MODEL.yaml"
+PROMPT_FILE="$SCRIPT_DIR/prompts/cv-analyzer-default.yaml"
+if [ -n "$PROMPT_OVERRIDE" ]; then
+  if [ -f "$PROMPT_OVERRIDE" ]; then
+    PROMPT_FILE="$PROMPT_OVERRIDE"
+  elif [ -f "$SCRIPT_DIR/prompts/$PROMPT_OVERRIDE" ]; then
+    PROMPT_FILE="$SCRIPT_DIR/prompts/$PROMPT_OVERRIDE"
+  else
+    echo "❌ Prompt file not found: $PROMPT_OVERRIDE"
+    exit 1
+  fi
+fi
+
 if [ ! -f "$PROMPT_FILE" ]; then
   echo "❌ Prompt file not found: $PROMPT_FILE"
   exit 1
@@ -108,7 +135,8 @@ fi
 OLLAMA_MODEL_NAME=$(yq -r '.model // ""' "$PROMPT_FILE")
 OLLAMA_MODEL_TAG=$(yq -r '.tag // "latest"' "$PROMPT_FILE")
 if [ -z "$OLLAMA_MODEL_NAME" ]; then
-  OLLAMA_MODEL_NAME="$MODEL"
+  echo "❌ Prompt file must define a model: $PROMPT_FILE"
+  exit 1
 fi
 OLLAMA_MODEL="${OLLAMA_MODEL_NAME}:${OLLAMA_MODEL_TAG}"
 
