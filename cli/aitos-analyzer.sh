@@ -13,13 +13,13 @@
 #  * or check your OS package manager for installation of the above tools
 #
 # Usage:
-#  ./aitos-analyzer.sh [--poppler] [--text-only] [--prompt <prompt.yaml>] <resume.pdf/docx/txt> <job_description.txt>
+#  ./aitos-analyzer.sh [--poppler] [--text-only] [--prompt <prompt.yaml>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>
 #
 # Example:
 #  ./aitos-analyzer.sh resume.pdf job.txt
-#  ./aitos-analyzer.sh --text-only resume.pdf job.txt
-#  ./aitos-analyzer.sh --prompt prompts/cv-analyzer-qwen.yaml resume.pdf job.txt
-#  ./aitos-analyzer.sh --poppler resume.pdf job.txt
+#  ./aitos-analyzer.sh --text-only resume.pdf job.pdf
+#  ./aitos-analyzer.sh --prompt prompts/cv-analyzer-qwen.yaml resume.pdf job.docx
+#  ./aitos-analyzer.sh --poppler resume.pdf job.pdf
 #
 # Build a container image and run (optional):
 #  * docker build --target analyzer -t aitos-analyzer -f docker/Dockerfile .
@@ -58,7 +58,7 @@ while [[ "$1" == --* ]]; do
 done
 
 if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] <resume.pdf/docx/txt> <job_description.txt>"
+  echo "Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>"
   echo "Example: $0 resume.pdf job.txt"
   echo "Example with custom prompt: $0 --prompt prompts/qwen3.yaml resume.pdf job.txt"
   echo "Default prompt: prompts/cv-analyzer-default.yaml"
@@ -80,8 +80,10 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RESUME_DIR="$(cd "$(dirname "$RESUME")" && pwd)"
+JD_DIR="$(cd "$(dirname "$JD")" && pwd)"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 BASENAME=$(basename "$RESUME")
+JD_BASENAME=$(basename "$JD")
 
 # 1. Extract text
 EXT="${RESUME##*.}"
@@ -114,6 +116,37 @@ fi
 
 echo "✅ Extracted text saved to: $TMP_RESUME"
 
+# 1b. Extract job description text
+JD_EXT="${JD##*.}"
+
+if [ "$JD_EXT" = "txt" ]; then
+  echo "📄 Using existing job description text file..."
+  TMP_JD="$JD"
+elif [ "$JD_EXT" = "pdf" ]; then
+  TMP_JD="$JD_DIR/${JD_BASENAME}_${TIMESTAMP}.txt"
+  if [ "$USE_POPPLER" = true ]; then
+    echo "📄 Extracting job description from PDF using Poppler..."
+    pdftotext "$JD" "$TMP_JD" || { echo "❌ Job description PDF extraction failed"; exit 1; }
+  else
+    echo "📄 Extracting job description from PDF using Tika..."
+    tika -t "$JD" 2>/dev/null > "$TMP_JD" || { echo "❌ Job description PDF extraction failed"; exit 1; }
+  fi
+elif [ "$JD_EXT" = "docx" ]; then
+  TMP_JD="$JD_DIR/${JD_BASENAME}_${TIMESTAMP}.txt"
+  echo "📄 Extracting job description from DOCX using Tika..."
+  tika -t "$JD" 2>/dev/null > "$TMP_JD" || { echo "❌ Job description DOCX extraction failed"; exit 1; }
+else
+  echo "❌ Unsupported job description file format: $JD_EXT"
+  exit 1
+fi
+
+if [ ! -s "$TMP_JD" ]; then
+  echo "❌ Job description extraction failed: Resulting file is empty"
+  exit 1
+fi
+
+echo "✅ Job description text ready: $TMP_JD"
+
 # 2. Run Ollama with working prompt
 PROMPT_FILE="$SCRIPT_DIR/prompts/cv-analyzer-default.yaml"
 if [ -n "$PROMPT_OVERRIDE" ]; then
@@ -144,7 +177,7 @@ echo "🤖 Running ATS analysis with model: $OLLAMA_MODEL"
 
 PROMPT_TEMPLATE=$(yq -r '.prompt' "$PROMPT_FILE")
 RES_CONTENT=$(cat "$TMP_RESUME")
-JD_CONTENT=$(cat "$JD")
+JD_CONTENT=$(cat "$TMP_JD")
 
 PROMPT=$(jq -rn \
   --arg resume "$RES_CONTENT" \

@@ -110,6 +110,56 @@ fi
 EOF
 chmod +x "$MOCK_BIN_DIR/ollama"
 
+cat <<'EOF' > "$MOCK_BIN_DIR/tika"
+#!/bin/bash
+if [ "$1" = "-t" ]; then
+    INPUT_FILE="$2"
+else
+    INPUT_FILE="$1"
+fi
+
+if [ ! -f "$INPUT_FILE" ]; then
+    echo "tika: file not found: $INPUT_FILE" >&2
+    exit 1
+fi
+
+if grep -q "__EXTRACT_FAIL__" "$INPUT_FILE"; then
+    echo "tika: simulated extraction failure" >&2
+    exit 1
+fi
+
+if grep -q "__EMPTY__" "$INPUT_FILE"; then
+    exit 0
+fi
+
+cat "$INPUT_FILE"
+EOF
+chmod +x "$MOCK_BIN_DIR/tika"
+
+cat <<'EOF' > "$MOCK_BIN_DIR/pdftotext"
+#!/bin/bash
+SRC="$1"
+DST="$2"
+
+if [ ! -f "$SRC" ]; then
+    echo "pdftotext: file not found: $SRC" >&2
+    exit 1
+fi
+
+if grep -q "__EXTRACT_FAIL__" "$SRC"; then
+    echo "pdftotext: simulated extraction failure" >&2
+    exit 1
+fi
+
+if grep -q "__EMPTY__" "$SRC"; then
+    : > "$DST"
+    exit 0
+fi
+
+cat "$SRC" > "$DST"
+EOF
+chmod +x "$MOCK_BIN_DIR/pdftotext"
+
 mkdir -p "$CLI_DIR/prompts"
 cp "$SCRIPT_DIR/test-model.yaml" "$CLI_DIR/prompts/test-model.yaml"
 sed 's/^model: test-model$/model: fail-model/' "$SCRIPT_DIR/test-model.yaml" > "$CLI_DIR/prompts/fail-model.yaml"
@@ -159,6 +209,12 @@ cp "$FIXTURES_DIR/job.txt" "$TEST_WORK_DIR/builder-story.txt"
 printf '' > "$TEST_WORK_DIR/empty.txt"
 cp "$FIXTURES_DIR/resume.txt" "$TEST_WORK_DIR/resume.unsupported"
 cp "$FIXTURES_DIR/job.txt" "$TEST_WORK_DIR/target.unsupported"
+cp "$FIXTURES_DIR/job.txt" "$TEST_WORK_DIR/job.pdf"
+cp "$FIXTURES_DIR/job.txt" "$TEST_WORK_DIR/job.docx"
+cp "$FIXTURES_DIR/job.txt" "$TEST_WORK_DIR/job_empty.pdf"
+echo "__EMPTY__" >> "$TEST_WORK_DIR/job_empty.pdf"
+cp "$FIXTURES_DIR/job.txt" "$TEST_WORK_DIR/job_extract_fail.pdf"
+echo "__EXTRACT_FAIL__" >> "$TEST_WORK_DIR/job_extract_fail.pdf"
 
 cleanup() {
     rm -f "$FIXTURES_DIR"/*.pdf "$FIXTURES_DIR"/*.txt_*
@@ -189,6 +245,18 @@ run_expect_success "Test 3: Analyzer absolute prompt path" "$OUTPUT_DIR/test3.tx
     "$CLI_DIR/aitos-analyzer.sh" --prompt "$CLI_DIR/prompts/test-model.yaml" "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt"
 assert_contains "Test 3: Analyzer absolute prompt path" "$OUTPUT_DIR/test3.txt" "status"
 
+run_expect_success "Test 3b: Analyzer job description PDF" "$OUTPUT_DIR/test3b.txt" \
+    "$CLI_DIR/aitos-analyzer.sh" "$FIXTURES_DIR/resume.txt" "$TEST_WORK_DIR/job.pdf"
+assert_contains "Test 3b: Analyzer job description PDF" "$OUTPUT_DIR/test3b.txt" "status"
+
+run_expect_success "Test 3c: Analyzer job description DOCX" "$OUTPUT_DIR/test3c.txt" \
+    "$CLI_DIR/aitos-analyzer.sh" "$FIXTURES_DIR/resume.txt" "$TEST_WORK_DIR/job.docx"
+assert_contains "Test 3c: Analyzer job description DOCX" "$OUTPUT_DIR/test3c.txt" "status"
+
+run_expect_success "Test 3d: Analyzer job description PDF with Poppler" "$OUTPUT_DIR/test3d.txt" \
+    "$CLI_DIR/aitos-analyzer.sh" --poppler "$FIXTURES_DIR/resume.txt" "$TEST_WORK_DIR/job.pdf"
+assert_contains "Test 3d: Analyzer job description PDF with Poppler" "$OUTPUT_DIR/test3d.txt" "status"
+
 run_expect_failure "Test 4: Analyzer ollama failure" "simulated failure" "$OUTPUT_DIR/test4.txt" \
     "$CLI_DIR/aitos-analyzer.sh" --prompt fail-model.yaml "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt"
 
@@ -210,8 +278,17 @@ run_expect_failure "Test 9: Analyzer missing job description" "Job description f
 run_expect_failure "Test 10: Analyzer unsupported format" "Unsupported file format" "$OUTPUT_DIR/test10.txt" \
     "$CLI_DIR/aitos-analyzer.sh" "$TEST_WORK_DIR/resume.unsupported" "$FIXTURES_DIR/job.txt"
 
+run_expect_failure "Test 10b: Analyzer unsupported job description format" "Unsupported job description file format" "$OUTPUT_DIR/test10b.txt" \
+    "$CLI_DIR/aitos-analyzer.sh" "$FIXTURES_DIR/resume.txt" "$TEST_WORK_DIR/target.unsupported"
+
 run_expect_failure "Test 11: Analyzer empty text input" "Extraction failed: Resulting file is empty" "$OUTPUT_DIR/test11.txt" \
     "$CLI_DIR/aitos-analyzer.sh" "$TEST_WORK_DIR/empty.txt" "$FIXTURES_DIR/job.txt"
+
+run_expect_failure "Test 11b: Analyzer empty extracted job description" "Job description extraction failed: Resulting file is empty" "$OUTPUT_DIR/test11b.txt" \
+    "$CLI_DIR/aitos-analyzer.sh" "$FIXTURES_DIR/resume.txt" "$TEST_WORK_DIR/job_empty.pdf"
+
+run_expect_failure "Test 11c: Analyzer failed job description PDF extraction" "Job description PDF extraction failed" "$OUTPUT_DIR/test11c.txt" \
+    "$CLI_DIR/aitos-analyzer.sh" "$FIXTURES_DIR/resume.txt" "$TEST_WORK_DIR/job_extract_fail.pdf"
 
 run_expect_failure "Test 12: Analyzer prompt file not found" "Prompt file not found" "$OUTPUT_DIR/test12.txt" \
     "$CLI_DIR/aitos-analyzer.sh" --prompt does-not-exist.yaml "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt"

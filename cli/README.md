@@ -50,7 +50,7 @@ For other platforms, install equivalent packages:
 ### Parameters
 
 - **resume_file**: Path to resume (PDF or DOCX format)
-- **job_description_file**: Path to job description (plain text file)
+- **job_description_file**: Path to job description (TXT, PDF, or DOCX format)
 
 By default, the CLI loads `prompts/cv-analyzer-default.yaml`.
 
