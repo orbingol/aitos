@@ -4,7 +4,7 @@ FROM phusion/baseimage:noble-1.0.2
 ENV TIKA_VERSION=3.2.3
 ENV YQ_VERSION=v4.50.1
 ENV YQ_CHECKSUM=c7a1278e6bbc4924f41b56db838086c39d13ee25dcb22089e7fbf16ac901f0d4
-ENV OLLAMA_VERSION=0.15.1
+ENV OLLAMA_VERSION=0.20.2
 ENV OLLAMA_HOST=http://host.docker.internal:11434
 
 # Install dependencies
