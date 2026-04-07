@@ -41,9 +41,9 @@ RUN curl -fsSL https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERS
 WORKDIR /app
 
 # Copy the script and prompts
-COPY aitos.sh .
+COPY aitos-analyzer.sh .
 COPY prompts/ ./prompts/
-RUN chmod +x aitos.sh
+RUN chmod +x aitos-analyzer.sh
 
 # Define entrypoint to allow passing arguments to shell script
-ENTRYPOINT ["/app/aitos.sh"]
+ENTRYPOINT ["/app/aitos-analyzer.sh"]
