@@ -1,4 +1,6 @@
 last_update: "2026-01-25T12:00:00Z"
+model: test-model
+tag: latest
 prompt: |
   TEST PROMPT
   Resume: {{RESUME}}
