@@ -50,5 +50,5 @@ jobs:
 
       - name: Run Tests
         run: |
-          chmod +x cli/aitos.sh
+          chmod +x cli/aitos-analyzer.sh
           cd cli/tests && ./test_runner.sh
