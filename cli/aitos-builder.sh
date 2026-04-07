@@ -22,6 +22,10 @@
 #  ./aitos-builder.sh --story story.txt ./data target_job.txt
 #  ./aitos-builder.sh --prompt my-prompt.yaml --story story.txt ./data target_job.txt
 #  ./aitos-builder.sh --poppler --prompt my-prompt.yaml ./data target_job.txt
+#
+# Build a container image and run (optional):
+#  * docker build --target builder -t aitos-builder -f docker/Dockerfile .
+#  * docker run -v $(pwd):/data aitos-builder /data /data/target_job.txt
 
 set -e
 set -o pipefail

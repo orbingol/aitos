@@ -22,8 +22,8 @@
 #  ./aitos-analyzer.sh --poppler resume.pdf job.txt
 #
 # Build a container image and run (optional):
-#  * docker build -t aitos -f docker/Dockerfile .
-#  * docker run -v $(pwd):/data aitos /data/resume.pdf /data/job.txt
+#  * docker build --target analyzer -t aitos-analyzer -f docker/Dockerfile .
+#  * docker run -v $(pwd):/data aitos-analyzer /data/resume.pdf /data/job.txt
 
 set -e
 set -o pipefail

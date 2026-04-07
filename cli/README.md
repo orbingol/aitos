@@ -86,7 +86,8 @@ You can run the CLI tool using Docker to avoid local dependency issues.
 ### Build
 
 ```bash
-docker build -t aitos -f docker/Dockerfile .
+docker build --target analyzer -t aitos-analyzer -f docker/Dockerfile .
+docker build --target builder -t aitos-builder -f docker/Dockerfile .
 ```
 
 ### Run
@@ -94,7 +95,8 @@ docker build -t aitos -f docker/Dockerfile .
 Mount your local files as a volume to the container:
 
 ```bash
-docker run --rm -v $(pwd):/data aitos /data/resume.pdf /data/job.txt
+docker run --rm -v $(pwd):/data aitos-analyzer /data/resume.pdf /data/job.txt
+docker run --rm -v $(pwd):/data aitos-builder /data /data/target_job.txt
 ```
 
 *Note: The container connects to Ollama on the host via `http://host.docker.internal:11434` by default.*
