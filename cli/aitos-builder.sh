@@ -37,10 +37,18 @@ while [[ "$1" == --* ]]; do
       shift
       ;;
     --story)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --story"
+        exit 1
+      fi
       STORY_FILE="$2"
       shift 2
       ;;
     --prompt)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --prompt"
+        exit 1
+      fi
       PROMPT_OVERRIDE="$2"
       shift 2
       ;;
