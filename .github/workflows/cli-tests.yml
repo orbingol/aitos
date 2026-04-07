@@ -12,11 +12,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
-      YQ_VERSION: v4.50.1
-      YQ_CHECKSUM: c7a1278e6bbc4924f41b56db838086c39d13ee25dcb22089e7fbf16ac901f0d4
-      TIKA_VERSION: 3.2.3
+      YQ_VERSION: v4.52.5
+      YQ_CHECKSUM: 75d893a0d5940d1019cb7cdc60001d9e876623852c31cfc6267047bc31149fa9
+      TIKA_VERSION: 3.3.0
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

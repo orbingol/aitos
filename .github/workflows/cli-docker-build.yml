@@ -1,0 +1,35 @@
+name: CLI Docker Tests
+
+on:
+  push:
+    paths:
+      - "cli/**"
+      - ".github/workflows/cli-docker-build.yml"
+  pull_request:
+    paths:
+      - "cli/**"
+      - ".github/workflows/cli-docker-build.yml"
+
+jobs:
+  build:
+    name: Build CLI Docker (${{ matrix.target }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [analyzer, builder]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build CLI image
+        run: |
+          docker build \
+            --file cli/docker/Dockerfile \
+            --target "${{ matrix.target }}" \
+            --tag "aitos-${{ matrix.target }}:ci" \
+            cli
