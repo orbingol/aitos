@@ -156,6 +156,11 @@ extract_job_description() {
   fi
 }
 
+sanitize_output_stream() {
+  # Strip carriage returns and ANSI control sequences from streamed model output.
+  perl -pe 's/\r$//; s/\e\[[0-9;?]*[ -\/]*[@-~]//g'
+}
+
 # ── collect CV+job pairs from data_dir ───────────────────────────────────────
 
 EXAMPLES=""
@@ -278,7 +283,7 @@ echo "🤖 Generating CV with model: $OLLAMA_MODEL"
 echo "--~--"
 echo ""
 
-ollama run "$OLLAMA_MODEL" <<< "$PROMPT" | tee "$OUTPUT_FILE"
+ollama run "$OLLAMA_MODEL" <<< "$PROMPT" | sanitize_output_stream | tee "$OUTPUT_FILE"
 
 echo ""
 echo "--~--"
