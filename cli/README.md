@@ -3,6 +3,7 @@
 A standalone command-line interface for AiToS (AI-powered ATS Resume Analyzer) that provides quick resume analysis
 without requiring the web interface.
 This tool directly integrates with Ollama models to simulate ATS behavior and provide comprehensive resume scoring.
+The active model and prompt are defined by the selected YAML prompt file.
 
 ## Features
 
@@ -43,34 +44,39 @@ For other platforms, install equivalent packages:
 ### Basic Syntax
 
 ```bash
-./aitos.sh [OPTIONS] <resume_file> <job_description_file> <model>
+./aitos-analyzer.sh [OPTIONS] <resume_file> <job_description_file>
 ```
 
 ### Parameters
 
 - **resume_file**: Path to resume (PDF or DOCX format)
 - **job_description_file**: Path to job description (plain text file)
-- **model**: AI model to use (`gemma3`, `qwen3`, or `gpt-oss`)
+
+By default, the CLI loads `prompts/cv-analyzer-default.yaml`.
 
 ### Options
 
 - `--poppler`: Use Poppler (pdftotext) instead of Tika for PDF extraction
 - `--text-only`: Filter out the JSON data and only display the human-readable report
+- `--prompt <yaml-file>`: Override the default prompt file
 
 ### Examples
 
 ```bash
 # Basic analysis (shows full output including JSON)
-./aitos.sh resume.pdf job.txt gemma3
+./aitos-analyzer.sh resume.pdf job.txt
 
 # Show only the human-readable report
-./aitos.sh --text-only resume.pdf job.txt gemma3
+./aitos-analyzer.sh --text-only resume.pdf job.txt
+
+# Use a different prompt file
+./aitos-analyzer.sh --prompt prompts/qwen3.yaml resume.pdf job.txt
 
 # Use Poppler for PDF processing
-./aitos.sh --poppler resume.pdf job.txt qwen3
+./aitos-analyzer.sh --poppler resume.pdf job.txt
 
 # Make script executable (if needed)
-chmod +x aitos.sh
+chmod +x aitos-analyzer.sh
 ```
 
 ## Docker Support
@@ -88,7 +94,7 @@ docker build -t aitos -f docker/Dockerfile .
 Mount your local files as a volume to the container:
 
 ```bash
-docker run --rm -v $(pwd):/data aitos /data/resume.pdf /data/job.txt gemma3
+docker run --rm -v $(pwd):/data aitos /data/resume.pdf /data/job.txt
 ```
 
 *Note: The container connects to Ollama on the host via `http://host.docker.internal:11434` by default.*
@@ -185,16 +191,16 @@ ollama list
 **"Permission denied" errors:**
 ```bash
 # Make script executable
-chmod +x aitos.sh
+chmod +x aitos-analyzer.sh
 
 # Run with explicit shell
-bash aitos.sh resume.pdf job.txt gemma3
+bash aitos-analyzer.sh resume.pdf job.txt
 ```
 
 **PDF extraction issues:**
 ```bash
 # Try alternative PDF processor
-./aitos.sh --poppler resume.pdf job.txt gemma3
+./aitos-analyzer.sh --poppler resume.pdf job.txt
 
 # Check PDF file integrity
 file resume.pdf
@@ -231,7 +237,7 @@ The CLI tool is independent but uses the same analysis prompts as the web interf
 #!/bin/bash
 # Example batch script
 for resume in resumes/*.pdf; do
-    ./aitos.sh "$resume" job_description.txt gemma3 > "reports/$(basename "$resume" .pdf)_report.txt"
+  ./aitos-analyzer.sh "$resume" job_description.txt > "reports/$(basename "$resume" .pdf)_report.txt"
 done
 ```
 
@@ -250,11 +256,11 @@ chmod +x tests/test_runner.sh
 This script tests extraction logic, prompt generation, and output filtering using a mock Ollama binary.
 
 ### Model Comparison
-To see how different models evaluate the same resume:
+To see how different prompt files evaluate the same resume:
 ```bash
-for model in gemma3 qwen3 gpt-oss; do
-    echo "--- $model ---"
-    ./aitos.sh --text-only resume.pdf job.txt $model
+for prompt in prompts/cv-analyzer-default.yaml prompts/cv-analyzer-qwen.yaml prompts/cv-analyzer-gpt-oss.yaml; do
+  echo "--- $prompt ---"
+  ./aitos-analyzer.sh --text-only --prompt "$prompt" resume.pdf job.txt
 done
 ```
 
@@ -262,10 +268,10 @@ done
 Since the default output includes JSON, you can use `jq` to extract specific data:
 ```bash
 # Save the JSON report to a file
-./aitos.sh resume.pdf job.txt gemma3 | jq '.' > report.json
+./aitos-analyzer.sh resume.pdf job.txt | jq '.' > report.json
 
 # Get only the weighted score
-./aitos.sh resume.pdf job.txt gemma3 | jq '.weighted_overall_score'
+./aitos-analyzer.sh resume.pdf job.txt | jq '.weighted_overall_score'
 ```
 
 ## Support
