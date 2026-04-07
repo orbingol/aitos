@@ -157,8 +157,53 @@ extract_job_description() {
 }
 
 sanitize_output_stream() {
-  # Strip carriage returns and ANSI control sequences from streamed model output.
-  perl -pe 's/\r$//; s/\e\[[0-9;?]*[ -\/]*[@-~]//g'
+  # Clean streamed model output and merge visually wrapped / overlap-duplicated lines.
+  perl -ne '
+    s/\r$//;
+    s/\e\[[0-9;?]*[ -\/]*[@-~]//g;
+    chomp;
+    my $line = $_;
+
+    if (!defined $prev) {
+      $prev = $line;
+      next;
+    }
+
+    if ($line =~ /^\s*$/) {
+      print "$prev\n\n";
+      undef $prev;
+      next;
+    }
+
+    my $max = length($prev) < length($line) ? length($prev) : length($line);
+    my $overlap = 0;
+    for (my $k = $max; $k >= 4; $k--) {
+      if (substr($prev, -$k) eq substr($line, 0, $k)) {
+        $overlap = $k;
+        last;
+      }
+    }
+
+    if ($overlap > 0) {
+      $prev .= substr($line, $overlap);
+      next;
+    }
+
+    my $line_new_block = ($line =~ /^\s*[-*]\s/ || $line =~ /^\s*###/);
+    my $prev_complete = ($prev =~ /[.!?:;]$/);
+
+    if (!$line_new_block && !$prev_complete) {
+      $line =~ s/^\s+//;
+      $prev .= " " . $line;
+      next;
+    }
+
+    print "$prev\n";
+    $prev = $line;
+    END {
+      print "$prev\n" if defined $prev;
+    }
+  '
 }
 
 # ── collect CV+job pairs from data_dir ───────────────────────────────────────
