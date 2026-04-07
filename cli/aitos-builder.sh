@@ -16,7 +16,16 @@
 # Usage:
 #  ./aitos-builder.sh [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt/pdf/docx>
 #
-# Example:
+# Arguments:
+#  <data_dir>                         Directory containing example pairs: cv1.* + job1.*, cv2.* + job2.*, ...
+#  <target_job.txt/pdf/docx>          Target job description file used to generate the tailored CV.
+#
+# Options:
+#  --poppler                          Use Poppler (pdftotext) for PDF extraction instead of Tika.
+#  --story <story.txt>                Optional story/context file injected into the prompt.
+#  --prompt <prompt.yaml>             Override default prompt file (default: prompts/cv-builder-default.yaml).
+#
+# Examples:
 #  ./aitos-builder.sh ./data target_job.txt
 #  ./aitos-builder.sh ./data target_job.pdf
 #  ./aitos-builder.sh --story story.txt ./data target_job.txt

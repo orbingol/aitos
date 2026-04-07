@@ -15,7 +15,16 @@
 # Usage:
 #  ./aitos-analyzer.sh [--poppler] [--text-only] [--prompt <prompt.yaml>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>
 #
-# Example:
+# Arguments:
+#  <resume.pdf/docx/txt>              Path to resume file (TXT, PDF, or DOCX).
+#  <job_description.pdf/docx/txt>     Path to target job description (TXT, PDF, or DOCX).
+#
+# Options:
+#  --poppler                          Use Poppler (pdftotext) for PDF extraction instead of Tika.
+#  --text-only                        Print only the human-readable report section.
+#  --prompt <prompt.yaml>             Override default prompt file (default: prompts/cv-analyzer-default.yaml).
+#
+# Examples:
 #  ./aitos-analyzer.sh resume.pdf job.txt
 #  ./aitos-analyzer.sh --text-only resume.pdf job.pdf
 #  ./aitos-analyzer.sh --prompt prompts/cv-analyzer-qwen.yaml resume.pdf job.docx
