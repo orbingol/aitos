@@ -1,287 +1,203 @@
 # AiToS CLI
 
-A standalone command-line interface for AiToS (AI-powered ATS Resume Analyzer) that provides quick resume analysis
-without requiring the web interface.
-This tool directly integrates with Ollama models to simulate ATS behavior and provide comprehensive resume scoring.
-The active model and prompt are defined by the selected YAML prompt file.
+A standalone command-line interface for AiToS that performs AI-powered resume analysis and CV generation without
+requiring the web interface. Both tools connect directly to a running Ollama instance and are driven by YAML
+prompt files, making it straightforward to swap models or customise the prompts.
 
-## Features
+## Table of Contents
 
-- **Direct AI Analysis**: Bypasses web interface for quick analysis
-- **Multiple Document Formats**: Supports PDF and DOCX files
-- **Flexible Text Extraction**: Choose between Apache Tika (default) or Poppler for PDF processing
-- **Multiple AI Models**: Support for Gemma3, Qwen3, and GPT-OSS models
-- **Comprehensive Scoring**: Multi-metric ATS compatibility analysis
-- **Detailed Reports**: JSON structured data and human-readable analysis
-- **Standalone Operation**: No database or web server required
+- [aitos-analyzer.sh](#aitos-analyzersh)
+- [aitos-builder.sh](#aitos-buildersh)
+- [Prompt YAML Format](#prompt-yaml-format)
 
-## Prerequisites
+---
 
-Install required dependencies via Homebrew (macOS):
+## aitos-analyzer.sh
+
+Analyzes a resume against a target job description and produces two outputs: a structured JSON ATS-style report
+and a human-readable summary. Input files may be plain text, PDF, or DOCX; PDF extraction uses Apache Tika by
+default, with Poppler available as an alternative.
+
+### Dependencies
+
+- `tika` — document text extraction (PDF, DOCX)
+- `poppler` (`pdftotext`) — alternative PDF extraction (optional)
+- `ollama` — local AI model runtime
+- `jq` — JSON processing
+- `yq` — YAML processing
+
+### Arguments
+
+| Argument / Option | Description |
+|---|---|
+| `<resume>` | Path to the resume file (TXT, PDF, or DOCX) |
+| `<job_description>` | Path to the job description file (TXT, PDF, or DOCX) |
+| `--poppler` | Use Poppler (`pdftotext`) for PDF extraction instead of Tika |
+| `--text-only` | Print only the human-readable report, suppressing JSON output |
+| `--prompt <file>` | Override the default prompt file (path, relative path, or filename inside `prompts/`) |
+
+### Running Locally
 
 ```bash
-# Essential dependencies
-brew install tika          # Document text extraction
-brew install poppler       # Alternative PDF processing (optional)
-brew install ollama-app    # AI model runtime
-brew install jq            # JSON processing
-brew install yq            # YAML processing (required for prompts)
-
-# Pull required AI models
-ollama pull gemma3:latest
-ollama pull qwen3:latest
-ollama pull gpt-oss:latest
+./aitos-analyzer.sh [--poppler] [--text-only] [--prompt <prompt.yaml>] <resume> <job_description>
 ```
 
-For other platforms, install equivalent packages:
-- **Tika**: Apache Tika command-line tool
-- **Poppler**: PDF processing utilities (pdftotext)
-- **Ollama**: Local AI model runtime
-- **jq**: JSON command-line processor (required for prompt construction)
-
-## Usage
-
-### Basic Syntax
-
 ```bash
-./aitos-analyzer.sh [OPTIONS] <resume_file> <job_description_file>
-```
-
-### Parameters
-
-- **resume_file**: Path to resume (PDF or DOCX format)
-- **job_description_file**: Path to job description (TXT, PDF, or DOCX format)
-
-By default, the CLI loads `prompts/cv-analyzer-default.yaml`.
-
-### Options
-
-- `--poppler`: Use Poppler (pdftotext) instead of Tika for PDF extraction
-- `--text-only`: Filter out the JSON data and only display the human-readable report
-- `--prompt <yaml-file>`: Override the default prompt file
-
-### Examples
-
-```bash
-# Basic analysis (shows full output including JSON)
+# Basic analysis
 ./aitos-analyzer.sh resume.pdf job.txt
 
-# Show only the human-readable report
+# Human-readable report only
 ./aitos-analyzer.sh --text-only resume.pdf job.txt
 
-# Use a different prompt file
-./aitos-analyzer.sh --prompt prompts/qwen3.yaml resume.pdf job.txt
+# Alternative PDF extractor
+./aitos-analyzer.sh --poppler resume.pdf job.pdf
 
-# Use Poppler for PDF processing
-./aitos-analyzer.sh --poppler resume.pdf job.txt
-
-# Make script executable (if needed)
-chmod +x aitos-analyzer.sh
+# Custom prompt
+./aitos-analyzer.sh --prompt prompts/cv-analyzer-qwen.yaml resume.pdf job.txt
 ```
 
-## Docker Support
+### Running with Docker
 
-You can run the CLI tool using Docker to avoid local dependency issues.
-
-### Build
+Build the analyzer image from the shared Dockerfile:
 
 ```bash
 docker build --target analyzer -t aitos-analyzer -f docker/Dockerfile .
-docker build --target builder -t aitos-builder -f docker/Dockerfile .
 ```
 
-### Run
-
-Mount your local files as a volume to the container:
+Run by mounting a local directory to `/data`:
 
 ```bash
 docker run --rm -v $(pwd):/data aitos-analyzer /data/resume.pdf /data/job.txt
+```
+
+The container reaches Ollama on the host at `http://host.docker.internal:11434`.
+
+### Default Prompt
+
+When `--prompt` is not supplied the script loads `prompts/cv-analyzer-default.yaml`. Additional bundled prompts
+are available in the `prompts/` directory (`cv-analyzer-qwen.yaml`, `cv-analyzer-gpt-oss.yaml`).
+
+---
+
+## aitos-builder.sh
+
+Generates a tailored CV in plain text by studying a set of the candidate's existing CV and job-description pairs,
+then applying the learned profile to a new target job description. An optional story file can be provided to
+supply richer context such as concrete achievements and outcomes per role.
+
+The data directory must contain numbered pairs — `cv1.pdf` paired with `job1.txt`, `cv2.docx` paired with
+`job2.pdf`, and so on. Each CV and its matching job description share the same number. Supported file formats
+for each file in a pair are `.pdf`, `.docx`, and `.txt`.
+
+### Dependencies
+
+- `tika` — document text extraction (PDF, DOCX)
+- `poppler` (`pdftotext`) — alternative PDF extraction (optional)
+- `ollama` — local AI model runtime
+- `jq` — JSON processing
+- `yq` — YAML processing
+
+### Arguments
+
+| Argument / Option | Description |
+|---|---|
+| `<data_dir>` | Directory containing numbered CV + job pairs (`cv1.*` + `job1.*`, `cv2.*` + `job2.*`, …) |
+| `<target_job>` | Target job description file (TXT, PDF, or DOCX) |
+| `--poppler` | Use Poppler (`pdftotext`) for PDF extraction instead of Tika |
+| `--story <file>` | Plain-text file with per-role context (responsibilities, delivery approach, achievements) |
+| `--prompt <file>` | Override the default prompt file (path, relative path, or filename inside `prompts/`) |
+
+### Running Locally
+
+```bash
+./aitos-builder.sh [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job>
+```
+
+```bash
+# Basic usage
+./aitos-builder.sh ./data target_job.txt
+
+# With a PDF target job description
+./aitos-builder.sh ./data target_job.pdf
+
+# With additional story context
+./aitos-builder.sh --story story.txt ./data target_job.txt
+
+# Custom prompt and story
+./aitos-builder.sh --prompt my-prompt.yaml --story story.txt ./data target_job.txt
+```
+
+### Running with Docker
+
+Build the builder image from the shared Dockerfile:
+
+```bash
+docker build --target builder -t aitos-builder -f docker/Dockerfile .
+```
+
+Run by mounting a local directory to `/data`:
+
+```bash
 docker run --rm -v $(pwd):/data aitos-builder /data /data/target_job.txt
 ```
 
-*Note: The container connects to Ollama on the host via `http://host.docker.internal:11434` by default.*
+The container reaches Ollama on the host at `http://host.docker.internal:11434`.
 
-## Output
+### Default Prompt
 
-The CLI tool provides two types of output:
+When `--prompt` is not supplied the script loads `prompts/cv-builder-default.yaml`.
 
-### 1. JSON Report
-Structured data including:
-```json
-{
-  "parsing_clarity_score": 85,
-  "keyword_match_score": 72,
-  "formatting_safety_score": 90,
-  "overall_score": 78,
-  "weighted_overall_score": 80,
-  "top_missing_keywords": ["Python", "Docker", "AWS"],
-  "technical_questions": ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"],
-  "cultural_questions": ["CQ1", "CQ2", "CQ3"],
-  "summary": "Strong technical background with minor keyword gaps"
-}
+---
+
+## Prompt YAML Format
+
+Both scripts are driven by YAML prompt files. Creating a custom file lets you change the model, its tag, or
+the full prompt without touching the scripts.
+
+### Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `model` | Yes | Model name as registered in Ollama (e.g. `gemma4`, `qwen3`) |
+| `tag` | No | Model tag; defaults to `latest` when omitted |
+| `prompt` | Yes | Prompt template string containing placeholder tokens |
+
+### Placeholder Tokens
+
+**aitos-analyzer.sh** prompts:
+
+| Token | Replaced with |
+|---|---|
+| `{{RESUME}}` | Extracted resume text |
+| `{{JD}}` | Extracted job description text |
+
+**aitos-builder.sh** prompts:
+
+| Token | Replaced with |
+|---|---|
+| `{{EXAMPLES}}` | All extracted CV + job pairs from the data directory |
+| `{{STORY}}` | Content of the story file (empty string when not provided) |
+| `{{TARGET_JD}}` | Extracted target job description text |
+
+### Example
+
+```yaml
+model: gemma4
+tag: 12b
+prompt: |
+  You are an ATS resume analyzer.
+
+  Resume:
+  {{RESUME}}
+
+  Job description:
+  {{JD}}
+
+  Provide a brief assessment and a score out of 100.
 ```
 
-### 2. Human-Readable Report
-Detailed analysis including:
-- **Parsing Clarity**: ATS parsing assessment
-- **Keyword & Skills Match**: Job alignment analysis
-- **Formatting Risks**: ATS compatibility issues
-- **Improvement Suggestions**: Actionable recommendations
-- **Suggested Company Questions**: Interview preparation
+Pass the file via `--prompt`:
 
-## Scoring System
-
-### Core Metrics (0-100 scale)
-
-- **Parsing Clarity Score**: How well ATS systems can parse the resume
-- **Keyword Match Score**: Alignment with job description requirements
-- **Formatting Safety Score**: ATS-friendly formatting assessment
-- **Overall Score**: Model's holistic evaluation
-- **Weighted Overall Score**: Calculated as:
-  ```
-  0.4 × keyword_match + 0.3 × parsing_clarity + 0.3 × formatting_safety
-  ```
-
-### Additional Insights
-
-- **Missing Keywords**: Critical terms absent from resume
-- **Technical Questions**: Job-specific interview questions
-- **Cultural Questions**: Company culture and fit questions
-- **Summary**: Concise overall assessment
-
-## Model Comparison
-
-### Gemma3
-- **Best for**: Fast analysis, general assessment
-- **Strengths**: Quick processing, balanced scoring
-- **Use case**: Initial resume screening
-
-### Qwen3
-- **Best for**: Detailed technical analysis
-- **Strengths**: Thorough keyword analysis, technical depth
-- **Use case**: Technical role evaluation
-
-### GPT-OSS
-- **Best for**: Comprehensive analysis with detailed feedback
-- **Strengths**: Detailed improvement suggestions, nuanced scoring
-- **Use case**: Final resume optimization
-
-## Troubleshooting
-
-### Common Issues
-
-**"Command not found" errors:**
 ```bash
-# Ensure dependencies are installed
-brew install tika poppler ollama
-
-# Check Ollama is running
-ollama serve
+./aitos-analyzer.sh --prompt my-prompt.yaml resume.pdf job.txt
 ```
-
-**"Model not found" errors:**
-```bash
-# Pull missing models
-ollama pull gemma3:latest
-ollama pull qwen3:latest
-ollama pull gpt-oss:latest
-
-# List available models
-ollama list
-```
-
-**"Permission denied" errors:**
-```bash
-# Make script executable
-chmod +x aitos-analyzer.sh
-
-# Run with explicit shell
-bash aitos-analyzer.sh resume.pdf job.txt
-```
-
-**PDF extraction issues:**
-```bash
-# Try alternative PDF processor
-./aitos-analyzer.sh --poppler resume.pdf job.txt
-
-# Check PDF file integrity
-file resume.pdf
-```
-
-### Text Extraction Comparison
-
-**Apache Tika (default):**
-- Handles both PDF and DOCX
-- Better formatting preservation
-- More robust with complex documents
-
-**Poppler (--poppler flag):**
-- PDF only
-- Faster processing
-- Better for simple text extraction
-- Good fallback for problematic PDFs
-
-## File Management
-
-The script creates extracted text files in the same directory as the source resume:
-- Pattern: `{resume_filename}_{timestamp}.txt`
-- Contains the raw text extracted for AI analysis
-- Useful for verifying extraction quality
-- Clean up manually if needed
-
-## Integration
-
-### With Web Interface
-The CLI tool is independent but uses the same analysis prompts as the web interface, ensuring consistent results.
-
-### Batch Processing
-```bash
-#!/bin/bash
-# Example batch script
-for resume in resumes/*.pdf; do
-  ./aitos-analyzer.sh "$resume" job_description.txt > "reports/$(basename "$resume" .pdf)_report.txt"
-done
-```
-
-### CI/CD Integration
-The CLI tool can be integrated into automated workflows for resume screening and analysis.
-
-## Tips & Tricks
-
-### Development & Testing
-You can run the local test suite to verify script logic without requiring a full Ollama setup:
-```bash
-# From the cli directory
-chmod +x tests/test_runner.sh
-./tests/test_runner.sh
-```
-This script tests extraction logic, prompt generation, and output filtering using a mock Ollama binary.
-
-### Model Comparison
-To see how different prompt files evaluate the same resume:
-```bash
-for prompt in prompts/cv-analyzer-default.yaml prompts/cv-analyzer-qwen.yaml prompts/cv-analyzer-gpt-oss.yaml; do
-  echo "--- $prompt ---"
-  ./aitos-analyzer.sh --text-only --prompt "$prompt" resume.pdf job.txt
-done
-```
-
-### Automation & Extraction
-Since the default output includes JSON, you can use `jq` to extract specific data:
-```bash
-# Save the JSON report to a file
-./aitos-analyzer.sh resume.pdf job.txt | jq '.' > report.json
-
-# Get only the weighted score
-./aitos-analyzer.sh resume.pdf job.txt | jq '.weighted_overall_score'
-```
-
-## Support
-
-For issues related to:
-- **CLI script**: Check file permissions and dependencies
-- **Ollama models**: Ensure models are pulled and Ollama is running
-- **Document processing**: Try alternative extraction methods
-- **Analysis quality**: Consider different models for comparison
-
-The CLI tool provides the same analysis quality as the web interface but with the convenience of command-line operation.
