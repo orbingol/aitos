@@ -123,10 +123,7 @@ yarn docker:logs
 
 ### CLI Usage (Optional)
 
-```bash
-# Quick command-line analysis
-./cli/aitos.sh resume.pdf job_description.txt gemma3
-```
+See [cli/README.md](cli/README.md) for all CLI commands and usage examples.
 
 ## Project Structure
 
@@ -150,7 +147,7 @@ aitos/
 │   ├── docker/        # Frontend Docker configuration
 │   └── package.json
 ├── cli/               # Command-line interface
-│   ├── aitos.sh       # Standalone CLI script
+│   ├── aitos-analyzer.sh  # Standalone CLI analysis script
 │   └── README.md      # CLI documentation
 └── package.json       # Root workspace configuration
 ```

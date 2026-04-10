@@ -1,10 +1,11 @@
-FROM phusion/baseimage:noble-1.0.2
+FROM phusion/baseimage:noble-1.0.2 AS base
 
 # Default environment variables
-ENV TIKA_VERSION=3.2.3
-ENV YQ_VERSION=v4.50.1
-ENV YQ_CHECKSUM=c7a1278e6bbc4924f41b56db838086c39d13ee25dcb22089e7fbf16ac901f0d4
-ENV OLLAMA_VERSION=0.15.1
+ENV TIKA_VERSION=3.3.0
+ENV YQ_VERSION=v4.52.5
+ENV YQ_CHECKSUM=75d893a0d5940d1019cb7cdc60001d9e876623852c31cfc6267047bc31149fa9
+ENV OLLAMA_VERSION=0.20.2
+# Point ollama CLI in the container to the Ollama server running on the host.
 ENV OLLAMA_HOST=http://host.docker.internal:11434
 
 # Install dependencies
@@ -37,13 +38,20 @@ RUN curl -fsSL https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERS
     && tar -C /usr/local -xaf /tmp/ollama-linux-amd64.tar.zst \
     && rm /tmp/ollama-linux-amd64.tar.zst /tmp/sha256sum.txt
 
-# Set up application directory
 WORKDIR /app
 
-# Copy the script and prompts
-COPY aitos.sh .
-COPY prompts/ ./prompts/
-RUN chmod +x aitos.sh
+FROM base AS builder
 
-# Define entrypoint to allow passing arguments to shell script
-ENTRYPOINT ["/app/aitos.sh"]
+COPY aitos-builder.sh .
+COPY prompts/ ./prompts/
+RUN chmod +x aitos-builder.sh
+
+ENTRYPOINT ["/app/aitos-builder.sh"]
+
+FROM base AS analyzer
+
+COPY aitos-analyzer.sh .
+COPY prompts/ ./prompts/
+RUN chmod +x aitos-analyzer.sh
+
+ENTRYPOINT ["/app/aitos-analyzer.sh"]
