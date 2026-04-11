@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { reportService } from '../services/api';
 import { cleanAnalysisContent } from '../utils/textCleaner';
 
@@ -15,6 +16,26 @@ const ReportsManager = ({ reports, onRefresh, selectedReportId }) => {
   // Get unique models for filter
   const uniqueModels = [...new Set(reports.map(r => r.model))];
 
+  // Function to handle report selection and fetch details
+  const handleReportSelect = useCallback(async (report) => {
+    if (selectedReport?.id === report.id) return; // Already selected
+
+    setSelectedReport(report);
+    setSelectedReportDetails(null);
+    setShowJsonReport(false);
+    setLoading(true);
+
+    try {
+      const reportDetails = await reportService.getReport(report.id);
+      setSelectedReportDetails(reportDetails);
+    } catch (error) {
+      console.error('Failed to fetch report details:', error);
+      alert('Failed to load report details: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedReport?.id]);
+
   // Auto-select report if selectedReportId is provided
   useEffect(() => {
     if (selectedReportId && reports.length > 0) {
@@ -23,7 +44,7 @@ const ReportsManager = ({ reports, onRefresh, selectedReportId }) => {
         handleReportSelect(reportToSelect);
       }
     }
-  }, [selectedReportId, reports]);
+  }, [selectedReportId, reports, handleReportSelect]);
 
   // Filter and sort reports
   const filteredAndSortedReports = reports
@@ -51,26 +72,6 @@ const ReportsManager = ({ reports, onRefresh, selectedReportId }) => {
         return aValue < bValue ? 1 : -1;
       }
     });
-
-  // Function to handle report selection and fetch details
-  const handleReportSelect = async (report) => {
-    if (selectedReport?.id === report.id) return; // Already selected
-
-    setSelectedReport(report);
-    setSelectedReportDetails(null);
-    setShowJsonReport(false);
-    setLoading(true);
-
-    try {
-      const reportDetails = await reportService.getReport(report.id);
-      setSelectedReportDetails(reportDetails);
-    } catch (error) {
-      console.error('Failed to fetch report details:', error);
-      alert('Failed to load report details: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleReanalyze = async (reportId, model) => {
     try {
@@ -444,3 +445,18 @@ const ReportsManager = ({ reports, onRefresh, selectedReportId }) => {
 };
 
 export default ReportsManager;
+
+ReportsManager.propTypes = {
+  reports: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      score: PropTypes.number,
+      model: PropTypes.string.isRequired,
+      cvFilename: PropTypes.string,
+      jdTitle: PropTypes.string,
+      createdAt: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    })
+  ).isRequired,
+  onRefresh: PropTypes.func.isRequired,
+  selectedReportId: PropTypes.string,
+};

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 
 const Navigation = ({ currentView, onViewChange }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -91,3 +92,8 @@ const Navigation = ({ currentView, onViewChange }) => {
 };
 
 export default Navigation;
+
+Navigation.propTypes = {
+  currentView: PropTypes.string.isRequired,
+  onViewChange: PropTypes.func.isRequired,
+};
