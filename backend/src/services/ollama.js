@@ -1,10 +1,51 @@
-export function buildPrompt(model, resumeText, jdText) {
-  if (model === 'gpt-oss') {
-    return `You are simulating a commercial Applicant Tracking System (ATS).\nAnalyze the resume and the job description.\nScores must be integers between 0 and 100.\n\n### INPUTS\nResume text:\n${resumeText}\n\nJob description:\n${jdText}\n\n### OUTPUT FORMAT\n1. JSON report with keys:\n{\n  "parsing_clarity_score": 0-100,\n  "keyword_match_score": 0-100,\n  "formatting_safety_score": 0-100,\n  "overall_score": 0-100,\n  "weighted_overall_score": 0-100,\n  "top_missing_keywords": ["kw1","kw2","kw3"],\n  "technical_questions": ["q1","q2","q3","q4","q5","q6"],\n  "cultural_questions": ["cq1","cq2","cq3"],\n  "summary": "short 1-2 sentence overview"\n}\n2. Human-readable report in this format:\n- Parsing clarity: Provide an analysis of whether the resume can be fully parsed by common ATS systems. Highlight any problematic areas.\n- Keyword & skills match: Evaluate how well the resume matches the job description. List strong matches and missing critical keywords or skills.\n- Formatting risks: Identify formatting elements (tables, columns, graphics, headers/footers) that may confuse ATS parsing.\n- Improvement suggestions: Offer actionable advice to improve ATS readability and alignment.\n- Suggested company questions: Provide 5-6 technical questions and 2-3 cultural questions that the candidate could ask the company.\nDo not include any extra text.`;
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROMPTS_DIR = path.join(__dirname, '..', '..', 'prompts');
+
+const PROMPT_FILE_BY_MODEL = {
+  'gpt-oss': 'cv-analyzer-gpt-oss.yaml',
+};
+
+const DEFAULT_PROMPT_FILE = 'cv-analyzer-default.yaml';
+const promptTemplateCache = new Map();
+
+function getPromptTemplate(fileName) {
+  if (promptTemplateCache.has(fileName)) {
+    return promptTemplateCache.get(fileName);
   }
 
-  // Gemma3 / Qwen3 prompt
-  return `You are an ATS resume analyzer and company question generator.\nDo NOT provide career advice or cover letter suggestions.\nRespond exactly in the requested format.\n\n### INPUTS\nResume text:\n${resumeText}\n\nJob description:\n${jdText}\n\n### TASK\n1. Analyze parsing clarity: can ATS parse it fully? Is anything missing?\n2. Analyze keyword & skills match with the job description.\n3. Identify formatting risks: tables, columns, graphics, headers/footers, etc.\n4. Compute scores:\n   - parsing_clarity_score (0-100)\n   - keyword_match_score (0-100)\n   - formatting_safety_score (0-100)\n   - overall_score (0-100, model's own overall assessment)\n   - weighted_overall_score = 0.4*keyword_match + 0.3*parsing_clarity + 0.3*formatting_safety\n5. List top missing keywords relevant to the job.\n6. Generate 5-6 technical questions and 2-3 cultural questions for the company.\n7. Provide a short 1-2 sentence summary.\n\n### OUTPUT ORDER\n1. First, output the JSON exactly as specified.\n2. Then, output the human-readable report in the exact format below.\n3. Do NOT add any other text outside these two outputs.\n\n### OUTPUT FORMAT\n1. JSON report with keys:\n{\n  "parsing_clarity_score": <0-100>,\n  "keyword_match_score": <0-100>,\n  "formatting_safety_score": <0-100>,\n  "overall_score": <0-100>,\n  "weighted_overall_score": <0-100>,\n  "top_missing_keywords": ["kw1","kw2","kw3"],\n  "technical_questions": ["q1","q2","q3","q4","q5","q6"],\n  "cultural_questions": ["cq1","cq2","cq3"],\n  "summary": "short 1-2 sentence overview"\n}\n2. Human-readable report in this format:\n- Parsing clarity: Provide an analysis of whether the resume can be fully parsed by common ATS systems. Highlight any areas or sections that might be problematic.\n- Keyword & skills match: Evaluate how well the resume matches the job description. List both strong matches and missing critical keywords or skills.\n- Formatting risks: Identify any formatting elements (tables, columns, graphics, headers/footers) that may confuse ATS parsing.\n- Improvement suggestions: Offer concrete, actionable advice to improve ATS readability and alignment with the job description.\n- Suggested company questions: Provide 5-6 technical questions and 2-3 cultural questions that the candidate could ask the company based on the job description and company values.`;
+  const promptPath = path.join(PROMPTS_DIR, fileName);
+  if (!fs.existsSync(promptPath)) {
+    throw new Error(`Prompt file not found: ${promptPath}`);
+  }
+
+  const promptFileText = fs.readFileSync(promptPath, 'utf8');
+  const parsed = yaml.load(promptFileText);
+  const template = parsed?.prompt;
+
+  if (!template || typeof template !== 'string') {
+    throw new Error(`Prompt file ${promptPath} must contain a string 'prompt' field`);
+  }
+
+  promptTemplateCache.set(fileName, template);
+  return template;
+}
+
+function renderPromptTemplate(template, resumeText, jdText) {
+  return template
+    .replaceAll('{{resumeText}}', resumeText)
+    .replaceAll('{{jdText}}', jdText);
+}
+
+export function buildPrompt(model, resumeText, jdText) {
+  const promptFile = PROMPT_FILE_BY_MODEL[model] || DEFAULT_PROMPT_FILE;
+  const template = getPromptTemplate(promptFile);
+  return renderPromptTemplate(template, resumeText, jdText);
 }
 
 export async function runOllama(model, prompt) {
