@@ -1,6 +1,28 @@
 import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
 
 const router = Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const RECOMMENDED_MODELS_PATH = path.join(__dirname, '..', '..', 'prompts', 'recommended-models.yaml');
+
+function loadRecommendedModels() {
+  if (!fs.existsSync(RECOMMENDED_MODELS_PATH)) {
+    return [];
+  }
+
+  const yamlText = fs.readFileSync(RECOMMENDED_MODELS_PATH, 'utf8');
+  const parsed = yaml.load(yamlText);
+  const models = Array.isArray(parsed?.models) ? parsed.models : [];
+
+  return models
+    .map((item) => (typeof item === 'string' ? { name: item } : item))
+    .filter((item) => typeof item?.name === 'string' && item.name.trim().length > 0)
+    .map((item) => ({ name: item.name.trim() }));
+}
 
 // Proxy endpoint to get available models from Ollama
 router.get('/tags', async (req, res) => {
@@ -11,6 +33,17 @@ router.get('/tags', async (req, res) => {
   } catch (error) {
     console.error('Failed to fetch Ollama models:', error);
     res.status(500).json({ error: 'Failed to fetch models from Ollama' });
+  }
+});
+
+// Get recommended models for UI suggestions
+router.get('/recommended-models', (req, res) => {
+  try {
+    const models = loadRecommendedModels();
+    res.json({ models });
+  } catch (error) {
+    console.error('Failed to load recommended models:', error);
+    res.status(500).json({ error: 'Failed to load recommended models' });
   }
 });
 

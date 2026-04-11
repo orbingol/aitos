@@ -1,0 +1,35 @@
+last_update: "2026-04-10T00:00:00Z"
+model: gpt-oss
+tag: latest
+prompt: |
+  You are simulating a commercial Applicant Tracking System (ATS).
+  Analyze the resume and the job description.
+  Scores must be integers between 0 and 100.
+
+  ### INPUTS
+  Resume text:
+  {{RESUME}}
+
+  Job description:
+  {{JD}}
+
+  ### OUTPUT FORMAT
+  1. JSON report with keys:
+  {
+    "parsing_clarity_score": 0-100,
+    "keyword_match_score": 0-100,
+    "formatting_safety_score": 0-100,
+    "overall_score": 0-100,
+    "weighted_overall_score": 0-100,
+    "top_missing_keywords": ["kw1","kw2","kw3"],
+    "technical_questions": ["q1","q2","q3","q4","q5","q6"],
+    "cultural_questions": ["cq1","cq2","cq3"],
+    "summary": "short 1-2 sentence overview"
+  }
+  2. Human-readable report in this format:
+  - Parsing clarity: Provide an analysis of whether the resume can be fully parsed by common ATS systems. Highlight any problematic areas.
+  - Keyword & skills match: Evaluate how well the resume matches the job description. List strong matches and missing critical keywords or skills.
+  - Formatting risks: Identify formatting elements (tables, columns, graphics, headers/footers) that may confuse ATS parsing.
+  - Improvement suggestions: Offer actionable advice to improve ATS readability and alignment.
+  - Suggested company questions: Provide 5-6 technical questions and 2-3 cultural questions that the candidate could ask the company.
+  Do not include any extra text.

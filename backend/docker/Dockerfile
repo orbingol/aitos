@@ -25,6 +25,7 @@ COPY prisma ./prisma/
 RUN yarn prisma generate
 
 COPY src ./src/
+COPY prompts ./prompts/
 COPY openapi.yaml ./
 COPY docker/docker-entrypoint.sh ./docker-entrypoint.sh
 

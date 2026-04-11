@@ -116,6 +116,12 @@ export const ollamaService = {
     return response.data;
   },
 
+  // Get recommended models from backend config
+  async getRecommendedModels() {
+    const response = await api.get('/ollama/recommended-models');
+    return response.data;
+  },
+
   // Pull/install a model
   async pullModel(name) {
     const response = await api.post('/ollama/pull', { name });
