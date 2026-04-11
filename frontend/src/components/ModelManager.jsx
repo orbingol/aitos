@@ -5,9 +5,11 @@ const ModelManager = () => {
   const [models, setModels] = useState([]);
   const [recommendedModels, setRecommendedModels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true);
   const [isInstalling, setIsInstalling] = useState(false);
   const [newModelName, setNewModelName] = useState('');
   const [error, setError] = useState(null);
+  const [recommendationsError, setRecommendationsError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [installProgress, setInstallProgress] = useState(null);
 
@@ -18,10 +20,15 @@ const ModelManager = () => {
 
   const loadRecommendedModels = async () => {
     try {
+      setLoadingRecommendations(true);
+      setRecommendationsError(null);
       const data = await ollamaService.getRecommendedModels();
       setRecommendedModels(data.models || []);
-    } catch {
+    } catch (error) {
       setRecommendedModels([]);
+      setRecommendationsError('Failed to load recommended models: ' + error.message);
+    } finally {
+      setLoadingRecommendations(false);
     }
   };
 
@@ -35,6 +42,11 @@ const ModelManager = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const refreshModelData = () => {
+    loadModels();
+    loadRecommendedModels();
   };
 
   const handleInstallModel = async (e) => {
@@ -195,22 +207,27 @@ const ModelManager = () => {
 
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="text-sm font-medium text-gray-900 mb-2">Popular Models:</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {(recommendedModels.length > 0
-                  ? recommendedModels.map((model) => model.name)
-                  : ['gemma3:latest', 'gpt-oss:latest', 'qwen3:latest', 'deepseek-r1:latest']
-                ).map(model => (
-                  <button
-                    key={model}
-                    type="button"
-                    onClick={() => setNewModelName(model)}
-                    disabled={isInstalling}
-                    className="text-xs bg-white border border-gray-200 rounded px-3 py-2 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
-                  >
-                    {model}
-                  </button>
-                ))}
-              </div>
+              {loadingRecommendations ? (
+                <p className="text-sm text-gray-500">Loading recommended models...</p>
+              ) : recommendationsError ? (
+                <p className="text-sm text-red-700">{recommendationsError}</p>
+              ) : recommendedModels.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {recommendedModels.map((model) => (
+                    <button
+                      key={model.name}
+                      type="button"
+                      onClick={() => setNewModelName(model.name)}
+                      disabled={isInstalling}
+                      className="text-xs bg-white border border-gray-200 rounded px-3 py-2 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
+                    >
+                      {model.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No recommended models configured.</p>
+              )}
             </div>
           </form>
         </div>
@@ -223,7 +240,7 @@ const ModelManager = () => {
                 <span>Installed Models ({models.length})</span>
               </h3>
               <button
-                onClick={loadModels}
+                onClick={refreshModelData}
                 disabled={loading}
                 className="btn-secondary text-sm"
               >
