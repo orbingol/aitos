@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { reportService, ollamaService } from '../services/api';
 import { cleanAnalysisContent } from '../utils/textCleaner';
 
@@ -13,7 +14,7 @@ const AnalysisManager = ({ cvs, jds, onRefresh }) => {
   const [error, setError] = useState(null);
 
   // Fetch available models from Ollama
-  const fetchAvailableModels = async () => {
+  const fetchAvailableModels = useCallback(async () => {
     try {
       setIsLoadingModels(true);
       const data = await ollamaService.getModels();
@@ -28,9 +29,9 @@ const AnalysisManager = ({ cvs, jds, onRefresh }) => {
         }));
 
         setAvailableModels(models);
-        // Set the first model as default if no model is selected
-        if (!selectedModel && models.length > 0) {
-          setSelectedModel(models[0].id);
+        // Set the first model as default if no model is selected.
+        if (models.length > 0) {
+          setSelectedModel((current) => current || models[0].id);
         }
       } else {
         setError('No models available in Ollama. Please install some models first.');
@@ -41,12 +42,12 @@ const AnalysisManager = ({ cvs, jds, onRefresh }) => {
     } finally {
       setIsLoadingModels(false);
     }
-  };
+  }, []);
 
   // Load models on component mount
   useEffect(() => {
     fetchAvailableModels();
-  }, []);
+  }, [fetchAvailableModels]);
 
   const handleAnalyze = async () => {
     if (!selectedCV || !selectedJD) {
@@ -343,3 +344,23 @@ const AnalysisManager = ({ cvs, jds, onRefresh }) => {
 };
 
 export default AnalysisManager;
+
+AnalysisManager.propTypes = {
+  cvs: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      filename: PropTypes.string,
+      createdAt: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      preview: PropTypes.string,
+    })
+  ).isRequired,
+  jds: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      title: PropTypes.string,
+      createdAt: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      preview: PropTypes.string,
+    })
+  ).isRequired,
+  onRefresh: PropTypes.func.isRequired,
+};

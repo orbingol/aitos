@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 const Dashboard = ({ cvs, jds, reports, onViewChange }) => {
   const stats = [
     {
@@ -198,3 +200,19 @@ const Dashboard = ({ cvs, jds, reports, onViewChange }) => {
 };
 
 export default Dashboard;
+
+Dashboard.propTypes = {
+  cvs: PropTypes.arrayOf(PropTypes.object).isRequired,
+  jds: PropTypes.arrayOf(PropTypes.object).isRequired,
+  reports: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      score: PropTypes.number,
+      model: PropTypes.string,
+      cvFilename: PropTypes.string,
+      jdTitle: PropTypes.string,
+      createdAt: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    })
+  ).isRequired,
+  onViewChange: PropTypes.func.isRequired,
+};

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { jdService } from '../services/api';
 
 const JDManager = ({ jds, onRefresh }) => {
@@ -26,7 +27,9 @@ const JDManager = ({ jds, onRefresh }) => {
     (jd.title && jd.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (jd.preview && jd.preview.toLowerCase().includes(searchTerm.toLowerCase())) ||
     jd.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );  const handleCreate = async () => {
+  );
+
+  const handleCreate = async () => {
     if (!newJDText.trim() || !newJDTitle.trim()) return;
 
     try {
@@ -321,3 +324,15 @@ const JDManager = ({ jds, onRefresh }) => {
 };
 
 export default JDManager;
+
+JDManager.propTypes = {
+  jds: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      title: PropTypes.string,
+      preview: PropTypes.string,
+      createdAt: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    })
+  ).isRequired,
+  onRefresh: PropTypes.func.isRequired,
+};

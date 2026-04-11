@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { cvService } from '../services/api';
 
 const CVManager = ({ cvs, onRefresh }) => {
@@ -258,3 +259,15 @@ const CVManager = ({ cvs, onRefresh }) => {
 };
 
 export default CVManager;
+
+CVManager.propTypes = {
+  cvs: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      filename: PropTypes.string.isRequired,
+      createdAt: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      fileSize: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    })
+  ).isRequired,
+  onRefresh: PropTypes.func.isRequired,
+};
