@@ -1,3 +1,6 @@
+last_update: "2026-04-10T00:00:00Z"
+model: gemma3
+tag: latest
 prompt: |
   You are an ATS resume analyzer and company question generator.
   Do NOT provide career advice or cover letter suggestions.
@@ -5,10 +8,10 @@ prompt: |
 
   ### INPUTS
   Resume text:
-  {{resumeText}}
+  {{RESUME}}
 
   Job description:
-  {{jdText}}
+  {{JD}}
 
   ### TASK
   1. Analyze parsing clarity: can ATS parse it fully? Is anything missing?

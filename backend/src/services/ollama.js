@@ -38,8 +38,8 @@ function getPromptTemplate(fileName) {
 
 function renderPromptTemplate(template, resumeText, jdText) {
   return template
-    .replaceAll('{{resumeText}}', resumeText)
-    .replaceAll('{{jdText}}', jdText);
+    .replaceAll('{{RESUME}}', resumeText)
+    .replaceAll('{{JD}}', jdText);
 }
 
 export function buildPrompt(model, resumeText, jdText) {

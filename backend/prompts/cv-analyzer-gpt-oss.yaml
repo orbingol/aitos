@@ -1,3 +1,6 @@
+last_update: "2026-04-10T00:00:00Z"
+model: gpt-oss
+tag: latest
 prompt: |
   You are simulating a commercial Applicant Tracking System (ATS).
   Analyze the resume and the job description.
@@ -5,10 +8,10 @@ prompt: |
 
   ### INPUTS
   Resume text:
-  {{resumeText}}
+  {{RESUME}}
 
   Job description:
-  {{jdText}}
+  {{JD}}
 
   ### OUTPUT FORMAT
   1. JSON report with keys:
