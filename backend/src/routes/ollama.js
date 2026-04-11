@@ -11,7 +11,7 @@ const RECOMMENDED_MODELS_PATH = path.join(__dirname, '..', '..', 'prompts', 'rec
 
 function loadRecommendedModels() {
   if (!fs.existsSync(RECOMMENDED_MODELS_PATH)) {
-    throw new Error(`Recommended models file not found: ${RECOMMENDED_MODELS_PATH}`);
+    return [];
   }
 
   const yamlText = fs.readFileSync(RECOMMENDED_MODELS_PATH, 'utf8');
