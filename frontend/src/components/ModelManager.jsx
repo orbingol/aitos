@@ -3,6 +3,7 @@ import { ollamaService } from '../services/api';
 
 const ModelManager = () => {
   const [models, setModels] = useState([]);
+  const [recommendedModels, setRecommendedModels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isInstalling, setIsInstalling] = useState(false);
   const [newModelName, setNewModelName] = useState('');
@@ -12,7 +13,17 @@ const ModelManager = () => {
 
   useEffect(() => {
     loadModels();
+    loadRecommendedModels();
   }, []);
+
+  const loadRecommendedModels = async () => {
+    try {
+      const data = await ollamaService.getRecommendedModels();
+      setRecommendedModels(data.models || []);
+    } catch {
+      setRecommendedModels([]);
+    }
+  };
 
   const loadModels = async () => {
     try {
@@ -185,9 +196,10 @@ const ModelManager = () => {
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="text-sm font-medium text-gray-900 mb-2">Popular Models:</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {[
-                  'gemma3:latest', 'gpt-oss:latest', 'qwen3:latest', 'deepseek-r1:latest'
-                ].map(model => (
+                {(recommendedModels.length > 0
+                  ? recommendedModels.map((model) => model.name)
+                  : ['gemma3:latest', 'gpt-oss:latest', 'qwen3:latest', 'deepseek-r1:latest']
+                ).map(model => (
                   <button
                     key={model}
                     type="button"
@@ -318,26 +330,6 @@ const ModelManager = () => {
                 <li>Models are downloaded and stored locally by Ollama</li>
                 <li>You can install multiple models and switch between them for analysis</li>
               </ul>
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h4 className="font-medium text-yellow-900 mb-2">Recommended Models:</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-yellow-800">
-                <div>
-                  <strong>Advanced AI Models:</strong>
-                  <ul className="list-disc list-inside ml-4">
-                    <li>gemma3:latest - Google&apos;s latest Gemma model</li>
-                    <li>gpt-oss:latest - Open-source GPT implementation</li>
-                  </ul>
-                </div>
-                <div>
-                  <strong>Specialized Models:</strong>
-                  <ul className="list-disc list-inside ml-4">
-                    <li>qwen3:latest - Alibaba&apos;s latest multilingual model</li>
-                    <li>deepseek-r1:latest - Advanced reasoning model</li>
-                  </ul>
-                </div>
-              </div>
             </div>
           </div>
         </div>
