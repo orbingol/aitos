@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { reportService } from '../services/api';
 import { cleanAnalysisContent } from '../utils/textCleaner';
 

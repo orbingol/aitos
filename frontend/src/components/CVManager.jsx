@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { cvService } from '../services/api';
 
 const CVManager = ({ cvs, onRefresh }) => {

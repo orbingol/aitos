@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { jdService } from '../services/api';
 
 const JDManager = ({ jds, onRefresh }) => {
@@ -78,10 +78,6 @@ const JDManager = ({ jds, onRefresh }) => {
     setIsEditing(false);
     setEditTitle('');
     setEditText('');
-  };
-
-  const getJDPreview = (text) => {
-    return text.length > 100 ? text.substring(0, 100) + '...' : text;
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ollamaService } from '../services/api';
 
 const ModelManager = () => {
@@ -326,14 +326,14 @@ const ModelManager = () => {
                 <div>
                   <strong>Advanced AI Models:</strong>
                   <ul className="list-disc list-inside ml-4">
-                    <li>gemma3:latest - Google's latest Gemma model</li>
+                    <li>gemma3:latest - Google&apos;s latest Gemma model</li>
                     <li>gpt-oss:latest - Open-source GPT implementation</li>
                   </ul>
                 </div>
                 <div>
                   <strong>Specialized Models:</strong>
                   <ul className="list-disc list-inside ml-4">
-                    <li>qwen3:latest - Alibaba's latest multilingual model</li>
+                    <li>qwen3:latest - Alibaba&apos;s latest multilingual model</li>
                     <li>deepseek-r1:latest - Advanced reasoning model</li>
                   </ul>
                 </div>
