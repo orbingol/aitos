@@ -1,3 +1,4 @@
+# Maintenance compose file: runs repository maintenance commands (for example dependency updates) in a Node container.
 services:
   yarn-update:
     image: node:22-slim

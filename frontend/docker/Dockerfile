@@ -1,3 +1,4 @@
+# Frontend development image that runs the Vite app on port 3001.
 FROM node:22-slim
 
 WORKDIR /app
