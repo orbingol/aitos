@@ -1,3 +1,4 @@
+# Test override compose file: mounts backend tests and swaps Ollama with the local mock service.
 services:
   backend:
     volumes:

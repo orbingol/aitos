@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Onur Rauf Bingol
+# See LICENSE in the project root for full license text.
+
 # aitos-analyzer.sh — Generates ATS-like reports for a given CV against a target job description.
 #
 # Analyze a resume against a target job description and produce both a JSON

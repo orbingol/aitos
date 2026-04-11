@@ -1,3 +1,4 @@
+# Multi-stage CLI image that provides shared tooling plus dedicated builder and analyzer entrypoints.
 FROM phusion/baseimage:noble-1.0.2 AS base
 
 # Default environment variables

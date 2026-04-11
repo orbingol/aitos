@@ -1,3 +1,4 @@
+# Main local development stack: backend API, frontend UI, Tika extractor, and Ollama service.
 services:
   backend:
     build:

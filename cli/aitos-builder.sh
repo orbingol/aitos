@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Onur Rauf Bingol
+# See LICENSE in the project root for full license text.
+
 # aitos-builder.sh — Builds a CV for a target job description using the provided user data.
 #
 # Given a data directory containing cv1.pdf/cv2.pdf/... and job1.txt/job2.txt/...

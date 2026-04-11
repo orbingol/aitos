@@ -1,3 +1,4 @@
+# Backend API image for local/dev container runs with Prisma, Tika integration, and SQLite support.
 FROM node:22-slim
 
 # Install dependencies for document processing + build tools
