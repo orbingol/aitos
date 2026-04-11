@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { reportService, ollamaService } from '../services/api';
 import { cleanAnalysisContent } from '../utils/textCleaner';
 
@@ -47,8 +47,6 @@ const AnalysisManager = ({ cvs, jds, onRefresh }) => {
   useEffect(() => {
     fetchAvailableModels();
   }, []);
-
-  const models = availableModels;
 
   const handleAnalyze = async () => {
     if (!selectedCV || !selectedJD) {
