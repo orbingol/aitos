@@ -27,8 +27,7 @@
 #  --poppler                          Use Poppler (pdftotext) for PDF extraction instead of Tika.
 #  --text-only                        Print only the human-readable report section.
 #  --prompt <prompt.yaml>             Override default prompt file (default: prompts/cv-analyzer-default.yaml).
-#  --model <name>                     Override model name from prompt file.
-#  --model-tag <tag>                  Override model tag from prompt file.
+#  --model <name[:tag]>               Override model from prompt file (tag optional; defaults to latest).
 #  --tika-url <url>                   Use Apache Tika server URL for extraction (instead of local tika binary).
 #  --ollama-url <url>                 Use Ollama server URL (instead of local ollama binary).
 #
@@ -36,7 +35,8 @@
 #  ./aitos-analyzer.sh resume.pdf job.txt
 #  ./aitos-analyzer.sh --text-only resume.pdf job.pdf
 #  ./aitos-analyzer.sh --prompt prompts/cv-analyzer-qwen.yaml resume.pdf job.docx
-#  ./aitos-analyzer.sh --model qwen3 --model-tag 8b resume.pdf job.txt
+#  ./aitos-analyzer.sh --model qwen3:8b resume.pdf job.txt
+#  ./aitos-analyzer.sh --model qwen3 resume.pdf job.txt
 #  ./aitos-analyzer.sh --poppler resume.pdf job.pdf
 #  ./aitos-analyzer.sh --tika-url http://localhost:9998 --ollama-url http://localhost:11434 resume.pdf job.txt
 #
@@ -51,17 +51,17 @@ USE_POPPLER=false
 TEXT_ONLY=false
 PROMPT_OVERRIDE=""
 MODEL_OVERRIDE=""
-MODEL_TAG_OVERRIDE=""
 TIKA_URL=""
 OLLAMA_URL=""
 AITOS_VERSION="${AITOS_VERSION:-dev}"
 
 print_usage() {
   cat <<EOF
-Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] [--model <name>] [--model-tag <tag>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>
+Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] [--model <name[:tag]>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>
 Example: $0 resume.pdf job.txt
 Example with custom prompt: $0 --prompt cv-analyzer-qwen.yaml resume.pdf job.txt
-Example with model override: $0 --model qwen3 --model-tag 8b resume.pdf job.txt
+Example with model override: $0 --model qwen3:8b resume.pdf job.txt
+Example with model override (default latest tag): $0 --model qwen3 resume.pdf job.txt
 Example with remote services: $0 --tika-url http://localhost:9998 --ollama-url http://localhost:11434 resume.pdf job.txt
 Default prompt: cv-analyzer-default.yaml
 EOF
@@ -180,14 +180,6 @@ while [[ "$1" == --* ]]; do
         exit 1
       fi
       MODEL_OVERRIDE="$2"
-      shift 2
-      ;;
-    --model-tag)
-      if [ -z "$2" ]; then
-        echo "❌ Missing value for --model-tag"
-        exit 1
-      fi
-      MODEL_TAG_OVERRIDE="$2"
       shift 2
       ;;
     --tika-url)
@@ -351,10 +343,23 @@ if [ -z "$OLLAMA_MODEL_NAME" ]; then
 fi
 
 if [ -n "$MODEL_OVERRIDE" ]; then
-  OLLAMA_MODEL_NAME="$MODEL_OVERRIDE"
-fi
-if [ -n "$MODEL_TAG_OVERRIDE" ]; then
-  OLLAMA_MODEL_TAG="$MODEL_TAG_OVERRIDE"
+  if [[ "$MODEL_OVERRIDE" == *:* ]]; then
+    OLLAMA_MODEL_NAME="${MODEL_OVERRIDE%%:*}"
+    OLLAMA_MODEL_TAG="${MODEL_OVERRIDE#*:}"
+    if [ -z "$OLLAMA_MODEL_TAG" ]; then
+      OLLAMA_MODEL_TAG="latest"
+      echo "ℹ️  --model provided without a tag value; using tag: latest"
+    fi
+  else
+    OLLAMA_MODEL_NAME="$MODEL_OVERRIDE"
+    OLLAMA_MODEL_TAG="latest"
+    echo "ℹ️  --model provided without a tag; using tag: latest"
+  fi
+
+  if [ -z "$OLLAMA_MODEL_NAME" ]; then
+    echo "❌ --model must include a model name, e.g. qwen3 or qwen3:8b"
+    exit 1
+  fi
 fi
 
 OLLAMA_MODEL="${OLLAMA_MODEL_NAME}:${OLLAMA_MODEL_TAG}"

@@ -28,8 +28,7 @@
 #  --poppler                          Use Poppler (pdftotext) for PDF extraction instead of Tika.
 #  --story <story.txt>                Optional story/context file injected into the prompt.
 #  --prompt <prompt.yaml>             Override default prompt file (default: prompts/cv-builder-default.yaml).
-#  --model <name>                     Override model name from prompt file.
-#  --model-tag <tag>                  Override model tag from prompt file.
+#  --model <name[:tag]>               Override model from prompt file (tag optional; defaults to latest).
 #  --tika-url <url>                   Use Apache Tika server URL for extraction (instead of local tika binary).
 #  --ollama-url <url>                 Use Ollama server URL (instead of local ollama binary).
 #
@@ -38,7 +37,8 @@
 #  ./aitos-builder.sh ./data target_job.pdf
 #  ./aitos-builder.sh --story story.txt ./data target_job.txt
 #  ./aitos-builder.sh --prompt my-prompt.yaml --story story.txt ./data target_job.txt
-#  ./aitos-builder.sh --model qwen3 --model-tag 8b ./data target_job.txt
+#  ./aitos-builder.sh --model qwen3:8b ./data target_job.txt
+#  ./aitos-builder.sh --model qwen3 ./data target_job.txt
 #  ./aitos-builder.sh --poppler --prompt my-prompt.yaml ./data target_job.txt
 #  ./aitos-builder.sh --tika-url http://localhost:9998 --ollama-url http://localhost:11434 ./data target_job.txt
 #
@@ -53,19 +53,19 @@ USE_POPPLER=false
 STORY_FILE=""
 PROMPT_OVERRIDE=""
 MODEL_OVERRIDE=""
-MODEL_TAG_OVERRIDE=""
 TIKA_URL=""
 OLLAMA_URL=""
 AITOS_VERSION="${AITOS_VERSION:-dev}"
 
 print_usage() {
   cat <<EOF
-Usage: $0 [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] [--model <name>] [--model-tag <tag>] <data_dir> <target_job.txt/pdf/docx>
+Usage: $0 [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] [--model <name[:tag]>] <data_dir> <target_job.txt/pdf/docx>
 Example: $0 ./data target_job.txt
 Example with PDF target job: $0 ./data target_job.pdf
 Example with story: $0 --story story.txt ./data target_job.txt
 Example with custom prompt: $0 --prompt cv-builder-default.yaml ./data target_job.txt
-Example with model override: $0 --model qwen3 --model-tag 8b ./data target_job.txt
+Example with model override: $0 --model qwen3:8b ./data target_job.txt
+Example with model override (default latest tag): $0 --model qwen3 ./data target_job.txt
 Example with remote services: $0 --tika-url http://localhost:9998 --ollama-url http://localhost:11434 ./data target_job.txt
 
 data_dir must contain pairs: cv1.* + job1.*, cv2.* + job2.*, ...
@@ -191,14 +191,6 @@ while [[ "$1" == --* ]]; do
         exit 1
       fi
       MODEL_OVERRIDE="$2"
-      shift 2
-      ;;
-    --model-tag)
-      if [ -z "$2" ]; then
-        echo "❌ Missing value for --model-tag"
-        exit 1
-      fi
-      MODEL_TAG_OVERRIDE="$2"
       shift 2
       ;;
     --tika-url)
@@ -483,10 +475,23 @@ if [ -z "$OLLAMA_MODEL_NAME" ] || [ "$OLLAMA_MODEL_NAME" = "null" ]; then
 fi
 
 if [ -n "$MODEL_OVERRIDE" ]; then
-  OLLAMA_MODEL_NAME="$MODEL_OVERRIDE"
-fi
-if [ -n "$MODEL_TAG_OVERRIDE" ]; then
-  OLLAMA_MODEL_TAG="$MODEL_TAG_OVERRIDE"
+  if [[ "$MODEL_OVERRIDE" == *:* ]]; then
+    OLLAMA_MODEL_NAME="${MODEL_OVERRIDE%%:*}"
+    OLLAMA_MODEL_TAG="${MODEL_OVERRIDE#*:}"
+    if [ -z "$OLLAMA_MODEL_TAG" ]; then
+      OLLAMA_MODEL_TAG="latest"
+      echo "ℹ️  --model provided without a tag value; using tag: latest"
+    fi
+  else
+    OLLAMA_MODEL_NAME="$MODEL_OVERRIDE"
+    OLLAMA_MODEL_TAG="latest"
+    echo "ℹ️  --model provided without a tag; using tag: latest"
+  fi
+
+  if [ -z "$OLLAMA_MODEL_NAME" ]; then
+    echo "❌ --model must include a model name, e.g. qwen3 or qwen3:8b"
+    exit 1
+  fi
 fi
 
 OLLAMA_MODEL="${OLLAMA_MODEL_NAME}:${OLLAMA_MODEL_TAG}"

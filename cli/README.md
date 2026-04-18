@@ -39,8 +39,7 @@ default, with Poppler available as an alternative.
 | `--poppler` | Use Poppler (`pdftotext`) for PDF extraction instead of Tika |
 | `--text-only` | Print only the human-readable report, suppressing JSON output |
 | `--prompt <file>` | Override the default prompt file (absolute path, relative path, or bundled prompt filename) |
-| `--model <name>` | Override the model name defined in the prompt file |
-| `--model-tag <tag>` | Override the model tag defined in the prompt file |
+| `--model <name[:tag]>` | Override the full model from the prompt file; tag is optional and defaults to `latest` |
 | `--tika-url <url>` | Use a Tika server endpoint instead of the local `tika` binary (e.g. `http://localhost:9998`) |
 | `--ollama-url <url>` | Use an Ollama server endpoint instead of the local `ollama` CLI (e.g. `http://localhost:11434`) |
 
@@ -64,7 +63,8 @@ default, with Poppler available as an alternative.
 ./aitos-analyzer.sh --prompt cv-analyzer-qwen.yaml resume.pdf job.txt
 
 # Override model at runtime (without editing prompt file)
-./aitos-analyzer.sh --model qwen3 --model-tag 8b resume.pdf job.txt
+./aitos-analyzer.sh --model qwen3:8b resume.pdf job.txt
+./aitos-analyzer.sh --model qwen3 resume.pdf job.txt
 
 # Use remote/containerized services
 ./aitos-analyzer.sh --tika-url http://localhost:9998 --ollama-url http://localhost:11434 resume.pdf job.txt
@@ -122,8 +122,7 @@ for each file in a pair are `.pdf`, `.docx`, and `.txt`.
 | `--poppler` | Use Poppler (`pdftotext`) for PDF extraction instead of Tika |
 | `--story <file>` | Plain-text file with per-role context (responsibilities, delivery approach, achievements) |
 | `--prompt <file>` | Override the default prompt file (absolute path, relative path, or bundled prompt filename) |
-| `--model <name>` | Override the model name defined in the prompt file |
-| `--model-tag <tag>` | Override the model tag defined in the prompt file |
+| `--model <name[:tag]>` | Override the full model from the prompt file; tag is optional and defaults to `latest` |
 | `--tika-url <url>` | Use a Tika server endpoint instead of the local `tika` binary (e.g. `http://localhost:9998`) |
 | `--ollama-url <url>` | Use an Ollama server endpoint instead of the local `ollama` CLI (e.g. `http://localhost:11434`) |
 
@@ -147,7 +146,8 @@ for each file in a pair are `.pdf`, `.docx`, and `.txt`.
 ./aitos-builder.sh --prompt my-prompt.yaml --story story.txt ./data target_job.txt
 
 # Override model at runtime (without editing prompt file)
-./aitos-builder.sh --model qwen3 --model-tag 8b ./data target_job.txt
+./aitos-builder.sh --model qwen3:8b ./data target_job.txt
+./aitos-builder.sh --model qwen3 ./data target_job.txt
 
 # Use remote/containerized services
 ./aitos-builder.sh --tika-url http://localhost:9998 --ollama-url http://localhost:11434 ./data target_job.txt
