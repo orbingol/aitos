@@ -34,7 +34,7 @@ default, with Poppler available as an alternative.
 | `<job_description>` | Path to the job description file (TXT, PDF, or DOCX) |
 | `--poppler` | Use Poppler (`pdftotext`) for PDF extraction instead of Tika |
 | `--text-only` | Print only the human-readable report, suppressing JSON output |
-| `--prompt <file>` | Override the default prompt file (path, relative path, or filename inside `prompts/`) |
+| `--prompt <file>` | Override the default prompt file (absolute path, relative path, or bundled prompt filename) |
 
 ### Running Locally
 
@@ -53,7 +53,7 @@ default, with Poppler available as an alternative.
 ./aitos-analyzer.sh --poppler resume.pdf job.pdf
 
 # Custom prompt
-./aitos-analyzer.sh --prompt prompts/cv-analyzer-qwen.yaml resume.pdf job.txt
+./aitos-analyzer.sh --prompt cv-analyzer-qwen.yaml resume.pdf job.txt
 ```
 
 ### Running with Docker
@@ -74,8 +74,9 @@ The container reaches Ollama on the host at `http://host.docker.internal:11434`.
 
 ### Default Prompt
 
-When `--prompt` is not supplied the script loads `prompts/cv-analyzer-default.yaml`. Additional bundled prompts
-are available in the `prompts/` directory (`cv-analyzer-qwen.yaml`, `cv-analyzer-gpt-oss.yaml`).
+When `--prompt` is not supplied the script loads the bundled `cv-analyzer-default.yaml`. Additional bundled prompts
+are available in the `prompts/` directory (`cv-analyzer-qwen.yaml`, `cv-analyzer-gpt-oss.yaml`). When
+`AITOS_PROMPTS_DIR` is set, bundled prompt names are resolved from that directory instead.
 
 ---
 
@@ -105,7 +106,7 @@ for each file in a pair are `.pdf`, `.docx`, and `.txt`.
 | `<target_job>` | Target job description file (TXT, PDF, or DOCX) |
 | `--poppler` | Use Poppler (`pdftotext`) for PDF extraction instead of Tika |
 | `--story <file>` | Plain-text file with per-role context (responsibilities, delivery approach, achievements) |
-| `--prompt <file>` | Override the default prompt file (path, relative path, or filename inside `prompts/`) |
+| `--prompt <file>` | Override the default prompt file (absolute path, relative path, or bundled prompt filename) |
 
 ### Running Locally
 
@@ -145,7 +146,8 @@ The container reaches Ollama on the host at `http://host.docker.internal:11434`.
 
 ### Default Prompt
 
-When `--prompt` is not supplied the script loads `prompts/cv-builder-default.yaml`.
+When `--prompt` is not supplied the script loads the bundled `cv-builder-default.yaml`. When
+`AITOS_PROMPTS_DIR` is set, bundled prompt names are resolved from that directory instead.
 
 ---
 
