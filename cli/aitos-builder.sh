@@ -28,13 +28,19 @@
 #  --poppler                          Use Poppler (pdftotext) for PDF extraction instead of Tika.
 #  --story <story.txt>                Optional story/context file injected into the prompt.
 #  --prompt <prompt.yaml>             Override default prompt file (default: prompts/cv-builder-default.yaml).
+#  --model <name>                     Override model name from prompt file.
+#  --model-tag <tag>                  Override model tag from prompt file.
+#  --tika-url <url>                   Use Apache Tika server URL for extraction (instead of local tika binary).
+#  --ollama-url <url>                 Use Ollama server URL (instead of local ollama binary).
 #
 # Examples:
 #  ./aitos-builder.sh ./data target_job.txt
 #  ./aitos-builder.sh ./data target_job.pdf
 #  ./aitos-builder.sh --story story.txt ./data target_job.txt
 #  ./aitos-builder.sh --prompt my-prompt.yaml --story story.txt ./data target_job.txt
+#  ./aitos-builder.sh --model qwen3 --model-tag 8b ./data target_job.txt
 #  ./aitos-builder.sh --poppler --prompt my-prompt.yaml ./data target_job.txt
+#  ./aitos-builder.sh --tika-url http://localhost:9998 --ollama-url http://localhost:11434 ./data target_job.txt
 #
 # Build a container image and run (optional):
 #  * docker build --target builder -t aitos-builder -f docker/Dockerfile .
@@ -46,20 +52,115 @@ set -o pipefail
 USE_POPPLER=false
 STORY_FILE=""
 PROMPT_OVERRIDE=""
+MODEL_OVERRIDE=""
+MODEL_TAG_OVERRIDE=""
+TIKA_URL=""
+OLLAMA_URL=""
 AITOS_VERSION="${AITOS_VERSION:-dev}"
 
 print_usage() {
   cat <<EOF
-Usage: $0 [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt/pdf/docx>
+Usage: $0 [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] [--model <name>] [--model-tag <tag>] <data_dir> <target_job.txt/pdf/docx>
 Example: $0 ./data target_job.txt
 Example with PDF target job: $0 ./data target_job.pdf
 Example with story: $0 --story story.txt ./data target_job.txt
 Example with custom prompt: $0 --prompt cv-builder-default.yaml ./data target_job.txt
+Example with model override: $0 --model qwen3 --model-tag 8b ./data target_job.txt
+Example with remote services: $0 --tika-url http://localhost:9998 --ollama-url http://localhost:11434 ./data target_job.txt
 
 data_dir must contain pairs: cv1.* + job1.*, cv2.* + job2.*, ...
 CV and job files may be .pdf, .docx, or .txt
 Default prompt: cv-builder-default.yaml
 EOF
+}
+
+normalize_url() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    echo ""
+    return
+  fi
+  local trimmed="${input%/}"
+  if [[ ! "$trimmed" =~ ^https?:// ]]; then
+    echo "❌ URL must start with http:// or https://: $input" >&2
+    exit 1
+  fi
+  echo "$trimmed"
+}
+
+extract_with_tika_server() {
+  local src="$1"
+  local dest="$2"
+
+  curl -fsS \
+    -X PUT \
+    -H 'Accept: text/plain' \
+    -H 'Content-Type: application/octet-stream' \
+    --data-binary "@$src" \
+    "$TIKA_URL/tika" > "$dest" || return 1
+}
+
+run_ollama_prompt() {
+  local model="$1"
+  local prompt="$2"
+
+  if [ -n "$OLLAMA_URL" ]; then
+    local payload
+    payload=$(jq -n \
+      --arg model "$model" \
+      --arg prompt "$prompt" \
+      '{model: $model, prompt: $prompt, stream: false}')
+
+    local response_file
+    response_file=$(mktemp)
+
+    local http_code
+    http_code=$(curl -sS \
+      -o "$response_file" \
+      -w '%{http_code}' \
+      -X POST \
+      -H 'Content-Type: application/json' \
+      --data "$payload" \
+      "$OLLAMA_URL/api/generate") || {
+      rm -f "$response_file"
+      echo "❌ Failed to connect to Ollama server: $OLLAMA_URL" >&2
+      return 1
+    }
+
+    if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+      local api_error
+      api_error=$(jq -r '.error // .message // empty' "$response_file" 2>/dev/null || true)
+
+      if [ -n "$api_error" ]; then
+        echo "❌ Ollama API error ($http_code): $api_error" >&2
+      else
+        echo "❌ Ollama API error ($http_code) from $OLLAMA_URL/api/generate" >&2
+      fi
+
+      if [[ "$api_error" == *"model"* && "$api_error" == *"not found"* ]]; then
+        echo "💡 Model '$model' is not available on that Ollama server. Pull it with: ollama pull $model" >&2
+      fi
+
+      rm -f "$response_file"
+      return 1
+    fi
+
+    local response_text
+    response_text=$(cat "$response_file")
+    rm -f "$response_file"
+
+    local generated
+    generated=$(jq -r '.response // empty' <<< "$response_text" 2>/dev/null || true)
+    if [ -z "$generated" ]; then
+      echo "❌ Ollama response did not include a 'response' field." >&2
+      return 1
+    fi
+
+    printf '%s\n' "$generated"
+    return
+  fi
+
+  ollama run "$model" <<< "$prompt"
 }
 
 while [[ "$1" == --* ]]; do
@@ -82,6 +183,38 @@ while [[ "$1" == --* ]]; do
         exit 1
       fi
       PROMPT_OVERRIDE="$2"
+      shift 2
+      ;;
+    --model)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --model"
+        exit 1
+      fi
+      MODEL_OVERRIDE="$2"
+      shift 2
+      ;;
+    --model-tag)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --model-tag"
+        exit 1
+      fi
+      MODEL_TAG_OVERRIDE="$2"
+      shift 2
+      ;;
+    --tika-url)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --tika-url"
+        exit 1
+      fi
+      TIKA_URL="$(normalize_url "$2")"
+      shift 2
+      ;;
+    --ollama-url)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --ollama-url"
+        exit 1
+      fi
+      OLLAMA_URL="$(normalize_url "$2")"
       shift 2
       ;;
     --help)
@@ -143,12 +276,18 @@ extract_cv() {
     pdf)
       if [ "$USE_POPPLER" = true ]; then
         pdftotext "$src" "$dest" || { echo "❌ PDF extraction failed for $src"; exit 1; }
+      elif [ -n "$TIKA_URL" ]; then
+        extract_with_tika_server "$src" "$dest" || { echo "❌ PDF extraction failed for $src"; exit 1; }
       else
         tika -t "$src" 2>/dev/null > "$dest" || { echo "❌ PDF extraction failed for $src"; exit 1; }
       fi
       ;;
     docx)
-      tika -t "$src" 2>/dev/null > "$dest" || { echo "❌ DOCX extraction failed for $src"; exit 1; }
+      if [ -n "$TIKA_URL" ]; then
+        extract_with_tika_server "$src" "$dest" || { echo "❌ DOCX extraction failed for $src"; exit 1; }
+      else
+        tika -t "$src" 2>/dev/null > "$dest" || { echo "❌ DOCX extraction failed for $src"; exit 1; }
+      fi
       ;;
     *)
       echo "❌ Unsupported CV format: $src"
@@ -174,12 +313,18 @@ extract_job_description() {
     pdf)
       if [ "$USE_POPPLER" = true ]; then
         pdftotext "$src" "$dest" || { echo "❌ Target job PDF extraction failed for $src"; exit 1; }
+      elif [ -n "$TIKA_URL" ]; then
+        extract_with_tika_server "$src" "$dest" || { echo "❌ Target job PDF extraction failed for $src"; exit 1; }
       else
         tika -t "$src" 2>/dev/null > "$dest" || { echo "❌ Target job PDF extraction failed for $src"; exit 1; }
       fi
       ;;
     docx)
-      tika -t "$src" 2>/dev/null > "$dest" || { echo "❌ Target job DOCX extraction failed for $src"; exit 1; }
+      if [ -n "$TIKA_URL" ]; then
+        extract_with_tika_server "$src" "$dest" || { echo "❌ Target job DOCX extraction failed for $src"; exit 1; }
+      else
+        tika -t "$src" 2>/dev/null > "$dest" || { echo "❌ Target job DOCX extraction failed for $src"; exit 1; }
+      fi
       ;;
     *)
       echo "❌ Unsupported target job format: $src"
@@ -336,6 +481,14 @@ if [ -z "$OLLAMA_MODEL_NAME" ] || [ "$OLLAMA_MODEL_NAME" = "null" ]; then
   echo "❌ 'model' field is missing in prompt file: $PROMPT_FILE"
   exit 1
 fi
+
+if [ -n "$MODEL_OVERRIDE" ]; then
+  OLLAMA_MODEL_NAME="$MODEL_OVERRIDE"
+fi
+if [ -n "$MODEL_TAG_OVERRIDE" ]; then
+  OLLAMA_MODEL_TAG="$MODEL_TAG_OVERRIDE"
+fi
+
 OLLAMA_MODEL="${OLLAMA_MODEL_NAME}:${OLLAMA_MODEL_TAG}"
 
 PROMPT_TEMPLATE=$(yq -r '.prompt' "$PROMPT_FILE")
@@ -366,7 +519,7 @@ echo "🤖 Generating CV with model: $OLLAMA_MODEL"
 echo "--~--"
 echo ""
 
-ollama run "$OLLAMA_MODEL" <<< "$PROMPT" | sanitize_output_stream | tee "$OUTPUT_FILE"
+run_ollama_prompt "$OLLAMA_MODEL" "$PROMPT" | sanitize_output_stream | tee "$OUTPUT_FILE"
 
 echo ""
 echo "--~--"

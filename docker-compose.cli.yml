@@ -1,0 +1,44 @@
+# Local service stack for CLI usage: Apache Tika and Ollama.
+services:
+  tika:
+    image: apache/tika:latest-full
+    ports:
+      - "9998:9998"
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      # Defaults to Docker volume "ollama_data".
+      # To reuse models downloaded by local Ollama, set:
+      #   OLLAMA_MODELS_PATH=$HOME/.ollama
+      # Then start compose; both local Ollama and this container will see the same model store.
+      - ${OLLAMA_MODELS_PATH:-ollama_data}:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # One-shot model prefetch service. Run with profile "init".
+  # Example: OLLAMA_INIT_MODELS="gemma4:31b qwen3:8b" docker compose -f docker-compose.cli.yml --profile init up ollama-init
+  ollama-init:
+    image: ollama/ollama:latest
+    profiles: ["init"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_INIT_MODELS
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command: >
+      sh -lc 'set -e;
+      MODELS="$${OLLAMA_INIT_MODELS:-gemma4:31b}";
+      for model in $${MODELS}; do
+        echo "Pulling model: $${model}";
+        ollama pull "$${model}";
+      done'
+
+volumes:
+  ollama_data:

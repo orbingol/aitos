@@ -32,6 +32,26 @@ Docker pulls all required services. No local Node.js or Ollama installation need
 
 See [cli/README.md](cli/README.md) for more details.
 
+To run only CLI dependencies (Tika + Ollama), use:
+
+```bash
+docker compose -f docker-compose.cli.yml up -d
+```
+
+To pre-pull model(s) first:
+
+```bash
+OLLAMA_INIT_MODELS="gemma4:31b" docker compose -f docker-compose.cli.yml --profile init up ollama-init
+```
+
+To reuse models from a local Ollama install, mount the local model directory:
+
+```bash
+OLLAMA_MODELS_PATH="$HOME/.ollama" docker compose -f docker-compose.cli.yml up -d
+```
+
+Then pass `--tika-url` and `--ollama-url` to the CLI scripts.
+
 ### Extended Documentation
 
 For the full feature breakdown, API reference, scoring details, local development setup, and deployment options see [README_DEV.md](README_DEV.md).
