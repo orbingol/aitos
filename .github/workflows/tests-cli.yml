@@ -4,11 +4,11 @@ on:
   push:
     paths:
       - 'cli/**'
-      - '.github/workflows/cli-tests.yml'
+      - '.github/workflows/tests-cli.yml'
   pull_request:
     paths:
       - 'cli/**'
-      - '.github/workflows/cli-tests.yml'
+      - '.github/workflows/tests-cli.yml'
 
 jobs:
   test-cli:
