@@ -245,6 +245,14 @@ run_expect_success "Test 3: Analyzer absolute prompt path" "$OUTPUT_DIR/test3.tx
     "$CLI_DIR/aitos-analyzer.sh" --prompt "$CLI_DIR/prompts/test-model.yaml" "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt"
 assert_contains "Test 3: Analyzer absolute prompt path" "$OUTPUT_DIR/test3.txt" "status"
 
+mkdir -p "$TEST_WORK_DIR/packaged-prompts"
+cp "$SCRIPT_DIR/test-model.yaml" "$TEST_WORK_DIR/packaged-prompts/packaged-analyzer.yaml"
+cp "$CLI_DIR/prompts/test-builder.yaml" "$TEST_WORK_DIR/packaged-prompts/packaged-builder.yaml"
+
+run_expect_success "Test 3a: Analyzer packaged prompt directory" "$OUTPUT_DIR/test3a.txt" \
+    env AITOS_PROMPTS_DIR="$TEST_WORK_DIR/packaged-prompts" "$CLI_DIR/aitos-analyzer.sh" --prompt packaged-analyzer.yaml "$FIXTURES_DIR/resume.txt" "$FIXTURES_DIR/job.txt"
+assert_contains "Test 3a: Analyzer packaged prompt directory" "$OUTPUT_DIR/test3a.txt" "status"
+
 run_expect_success "Test 3b: Analyzer job description PDF" "$OUTPUT_DIR/test3b.txt" \
     "$CLI_DIR/aitos-analyzer.sh" "$FIXTURES_DIR/resume.txt" "$TEST_WORK_DIR/job.pdf"
 assert_contains "Test 3b: Analyzer job description PDF" "$OUTPUT_DIR/test3b.txt" "status"
@@ -268,6 +276,14 @@ run_expect_failure "Test 6: Analyzer unknown option" "Unknown option" "$OUTPUT_D
 
 run_expect_failure "Test 7: Analyzer missing args" "Usage:" "$OUTPUT_DIR/test7.txt" \
     "$CLI_DIR/aitos-analyzer.sh"
+
+run_expect_success "Test 7a: Analyzer help" "$OUTPUT_DIR/test7a.txt" \
+    "$CLI_DIR/aitos-analyzer.sh" --help
+assert_contains "Test 7a: Analyzer help" "$OUTPUT_DIR/test7a.txt" "Usage:"
+
+run_expect_success "Test 7b: Analyzer version" "$OUTPUT_DIR/test7b.txt" \
+    env AITOS_VERSION="1.2.3" "$CLI_DIR/aitos-analyzer.sh" --version
+assert_contains "Test 7b: Analyzer version" "$OUTPUT_DIR/test7b.txt" "1.2.3"
 
 run_expect_failure "Test 8: Analyzer missing resume" "Resume file not found" "$OUTPUT_DIR/test8.txt" \
     "$CLI_DIR/aitos-analyzer.sh" "$TEST_WORK_DIR/missing-resume.txt" "$FIXTURES_DIR/job.txt"
@@ -326,6 +342,10 @@ run_expect_success "Test 18: Builder custom prompt with story" "$OUTPUT_DIR/test
     "$CLI_DIR/aitos-builder.sh" --prompt test-builder.yaml --story "$TEST_WORK_DIR/builder-story.txt" "$TEST_WORK_DIR/builder-data" "$TEST_WORK_DIR/target-job.txt"
 assert_contains "Test 18: Builder custom prompt with story" "$OUTPUT_DIR/test18.txt" "Story file loaded"
 
+run_expect_success "Test 18a: Builder packaged prompt directory" "$OUTPUT_DIR/test18a.txt" \
+    env AITOS_PROMPTS_DIR="$TEST_WORK_DIR/packaged-prompts" "$CLI_DIR/aitos-builder.sh" --prompt packaged-builder.yaml "$TEST_WORK_DIR/builder-data" "$TEST_WORK_DIR/target-job.txt"
+assert_contains "Test 18a: Builder packaged prompt directory" "$OUTPUT_DIR/test18a.txt" "Generating CV with model"
+
 run_expect_failure "Test 19: Builder missing story value" "Missing value for --story" "$OUTPUT_DIR/test19.txt" \
     "$CLI_DIR/aitos-builder.sh" --story
 
@@ -337,6 +357,14 @@ run_expect_failure "Test 21: Builder unknown option" "Unknown option" "$OUTPUT_D
 
 run_expect_failure "Test 22: Builder missing args" "Usage:" "$OUTPUT_DIR/test22.txt" \
     "$CLI_DIR/aitos-builder.sh"
+
+run_expect_success "Test 22a: Builder help" "$OUTPUT_DIR/test22a.txt" \
+    "$CLI_DIR/aitos-builder.sh" --help
+assert_contains "Test 22a: Builder help" "$OUTPUT_DIR/test22a.txt" "Usage:"
+
+run_expect_success "Test 22b: Builder version" "$OUTPUT_DIR/test22b.txt" \
+    env AITOS_VERSION="1.2.3" "$CLI_DIR/aitos-builder.sh" --version
+assert_contains "Test 22b: Builder version" "$OUTPUT_DIR/test22b.txt" "1.2.3"
 
 run_expect_failure "Test 23: Builder missing story file" "Story file not found" "$OUTPUT_DIR/test23.txt" \
     "$CLI_DIR/aitos-builder.sh" --story "$TEST_WORK_DIR/missing-story.txt" "$TEST_WORK_DIR/builder-data" "$TEST_WORK_DIR/target-job.txt"

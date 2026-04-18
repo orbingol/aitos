@@ -1,4 +1,4 @@
-name: App Tests
+name: Test Web App
 
 on:
   push:
@@ -25,7 +25,7 @@ on:
       - '.github/workflows/app-tests.yml'
 
 jobs:
-  test:
+  test-app:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
