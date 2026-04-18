@@ -1,4 +1,4 @@
-name: CLI Docker Tests
+name: Test Docker Images for CLI
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
       - ".github/workflows/cli-docker-build.yml"
 
 jobs:
-  build:
+  build-container:
     name: Build CLI Docker (${{ matrix.target }})
     runs-on: ubuntu-24.04
     strategy:

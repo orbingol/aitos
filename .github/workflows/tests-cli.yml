@@ -1,4 +1,4 @@
-name: CLI Tests
+name: Test CLI App
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
       - '.github/workflows/cli-tests.yml'
 
 jobs:
-  test:
+  test-cli:
     runs-on: ubuntu-24.04
     env:
       YQ_VERSION: v4.52.5
