@@ -4,11 +4,11 @@ on:
   push:
     paths:
       - "cli/**"
-      - ".github/workflows/cli-docker-build.yml"
+      - ".github/workflows/tests-cli-docker.yml"
   pull_request:
     paths:
       - "cli/**"
-      - ".github/workflows/cli-docker-build.yml"
+      - ".github/workflows/tests-cli-docker.yml"
 
 jobs:
   build-container:

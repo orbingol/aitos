@@ -4,6 +4,9 @@ A standalone command-line interface for AiToS that performs AI-powered resume an
 requiring the web interface. Both tools connect directly to a running Ollama instance and are driven by YAML
 prompt files, making it straightforward to swap models or customise the prompts.
 
+If you do not run local `tika`/`ollama` binaries, you can start containerized services from
+`../docker-compose.cli.yml` and pass their endpoints via `--tika-url` and `--ollama-url`.
+
 ## Table of Contents
 
 - [aitos-analyzer.sh](#aitos-analyzersh)
@@ -25,6 +28,7 @@ default, with Poppler available as an alternative.
 - `ollama` — local AI model runtime
 - `jq` — JSON processing
 - `yq` — YAML processing
+- `curl` — required when using `--tika-url` and/or `--ollama-url`
 
 ### Arguments
 
@@ -35,6 +39,9 @@ default, with Poppler available as an alternative.
 | `--poppler` | Use Poppler (`pdftotext`) for PDF extraction instead of Tika |
 | `--text-only` | Print only the human-readable report, suppressing JSON output |
 | `--prompt <file>` | Override the default prompt file (absolute path, relative path, or bundled prompt filename) |
+| `--model <name[:tag]>` | Override the full model from the prompt file; tag is optional and defaults to `latest` |
+| `--tika-url <url>` | Use a Tika server endpoint instead of the local `tika` binary (e.g. `http://localhost:9998`) |
+| `--ollama-url <url>` | Use an Ollama server endpoint instead of the local `ollama` CLI (e.g. `http://localhost:11434`) |
 
 ### Running Locally
 
@@ -54,6 +61,13 @@ default, with Poppler available as an alternative.
 
 # Custom prompt
 ./aitos-analyzer.sh --prompt cv-analyzer-qwen.yaml resume.pdf job.txt
+
+# Override model at runtime (without editing prompt file)
+./aitos-analyzer.sh --model qwen3:8b resume.pdf job.txt
+./aitos-analyzer.sh --model qwen3 resume.pdf job.txt
+
+# Use remote/containerized services
+./aitos-analyzer.sh --tika-url http://localhost:9998 --ollama-url http://localhost:11434 resume.pdf job.txt
 ```
 
 ### Running with Docker
@@ -97,6 +111,7 @@ for each file in a pair are `.pdf`, `.docx`, and `.txt`.
 - `ollama` — local AI model runtime
 - `jq` — JSON processing
 - `yq` — YAML processing
+- `curl` — required when using `--tika-url` and/or `--ollama-url`
 
 ### Arguments
 
@@ -107,6 +122,9 @@ for each file in a pair are `.pdf`, `.docx`, and `.txt`.
 | `--poppler` | Use Poppler (`pdftotext`) for PDF extraction instead of Tika |
 | `--story <file>` | Plain-text file with per-role context (responsibilities, delivery approach, achievements) |
 | `--prompt <file>` | Override the default prompt file (absolute path, relative path, or bundled prompt filename) |
+| `--model <name[:tag]>` | Override the full model from the prompt file; tag is optional and defaults to `latest` |
+| `--tika-url <url>` | Use a Tika server endpoint instead of the local `tika` binary (e.g. `http://localhost:9998`) |
+| `--ollama-url <url>` | Use an Ollama server endpoint instead of the local `ollama` CLI (e.g. `http://localhost:11434`) |
 
 ### Running Locally
 
@@ -126,7 +144,48 @@ for each file in a pair are `.pdf`, `.docx`, and `.txt`.
 
 # Custom prompt and story
 ./aitos-builder.sh --prompt my-prompt.yaml --story story.txt ./data target_job.txt
+
+# Override model at runtime (without editing prompt file)
+./aitos-builder.sh --model qwen3:8b ./data target_job.txt
+./aitos-builder.sh --model qwen3 ./data target_job.txt
+
+# Use remote/containerized services
+./aitos-builder.sh --tika-url http://localhost:9998 --ollama-url http://localhost:11434 ./data target_job.txt
 ```
+
+### Starting Tika + Ollama for CLI
+
+From the project root:
+
+```bash
+docker compose -f docker-compose.cli.yml up -d
+```
+
+Optional: pre-pull one or more models before using the CLI:
+
+```bash
+OLLAMA_INIT_MODELS="gemma4:31b" docker compose -f docker-compose.cli.yml --profile init up ollama-init
+```
+
+Optional: reuse models already downloaded by your local Ollama installation by mounting `~/.ollama`:
+
+```bash
+OLLAMA_MODELS_PATH="$HOME/.ollama" docker compose -f docker-compose.cli.yml up -d
+```
+
+With this mount, any model you pull locally (for example via `ollama pull gemma4:31b`) is also available to
+the containerized Ollama endpoint used by CLI scripts (`--ollama-url http://localhost:11434`).
+
+Then run scripts with:
+
+```bash
+--tika-url http://localhost:9998 --ollama-url http://localhost:11434
+```
+
+Notes:
+
+- When `OLLAMA_MODELS_PATH` is not set, Docker uses its own named volume (`ollama_data`).
+- The `ollama-init` service is a one-shot initializer used only when profile `init` is enabled.
 
 ### Running with Docker
 

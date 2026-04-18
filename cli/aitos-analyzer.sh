@@ -27,12 +27,18 @@
 #  --poppler                          Use Poppler (pdftotext) for PDF extraction instead of Tika.
 #  --text-only                        Print only the human-readable report section.
 #  --prompt <prompt.yaml>             Override default prompt file (default: prompts/cv-analyzer-default.yaml).
+#  --model <name[:tag]>               Override model from prompt file (tag optional; defaults to latest).
+#  --tika-url <url>                   Use Apache Tika server URL for extraction (instead of local tika binary).
+#  --ollama-url <url>                 Use Ollama server URL (instead of local ollama binary).
 #
 # Examples:
 #  ./aitos-analyzer.sh resume.pdf job.txt
 #  ./aitos-analyzer.sh --text-only resume.pdf job.pdf
 #  ./aitos-analyzer.sh --prompt prompts/cv-analyzer-qwen.yaml resume.pdf job.docx
+#  ./aitos-analyzer.sh --model qwen3:8b resume.pdf job.txt
+#  ./aitos-analyzer.sh --model qwen3 resume.pdf job.txt
 #  ./aitos-analyzer.sh --poppler resume.pdf job.pdf
+#  ./aitos-analyzer.sh --tika-url http://localhost:9998 --ollama-url http://localhost:11434 resume.pdf job.txt
 #
 # Build a container image and run (optional):
 #  * docker build --target analyzer -t aitos-analyzer -f docker/Dockerfile .
@@ -44,15 +50,110 @@ set -o pipefail
 USE_POPPLER=false
 TEXT_ONLY=false
 PROMPT_OVERRIDE=""
+MODEL_OVERRIDE=""
+TIKA_URL=""
+OLLAMA_URL=""
 AITOS_VERSION="${AITOS_VERSION:-dev}"
 
 print_usage() {
   cat <<EOF
-Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>
+Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] [--model <name[:tag]>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>
 Example: $0 resume.pdf job.txt
 Example with custom prompt: $0 --prompt cv-analyzer-qwen.yaml resume.pdf job.txt
+Example with model override: $0 --model qwen3:8b resume.pdf job.txt
+Example with model override (default latest tag): $0 --model qwen3 resume.pdf job.txt
+Example with remote services: $0 --tika-url http://localhost:9998 --ollama-url http://localhost:11434 resume.pdf job.txt
 Default prompt: cv-analyzer-default.yaml
 EOF
+}
+
+normalize_url() {
+  local input="$1"
+  if [ -z "$input" ]; then
+    echo ""
+    return
+  fi
+  local trimmed="${input%/}"
+  if [[ ! "$trimmed" =~ ^https?:// ]]; then
+    echo "❌ URL must start with http:// or https://: $input" >&2
+    exit 1
+  fi
+  echo "$trimmed"
+}
+
+extract_with_tika_server() {
+  local src="$1"
+  local dest="$2"
+
+  curl -fsS \
+    -X PUT \
+    -H 'Accept: text/plain' \
+    -H 'Content-Type: application/octet-stream' \
+    --data-binary "@$src" \
+    "$TIKA_URL/tika" > "$dest" || return 1
+}
+
+run_ollama_prompt() {
+  local model="$1"
+  local prompt="$2"
+
+  if [ -n "$OLLAMA_URL" ]; then
+    local payload
+    payload=$(jq -n \
+      --arg model "$model" \
+      --arg prompt "$prompt" \
+      '{model: $model, prompt: $prompt, stream: false}')
+
+    local response_file
+    response_file=$(mktemp)
+
+    local http_code
+    http_code=$(curl -sS \
+      -o "$response_file" \
+      -w '%{http_code}' \
+      -X POST \
+      -H 'Content-Type: application/json' \
+      --data "$payload" \
+      "$OLLAMA_URL/api/generate") || {
+      rm -f "$response_file"
+      echo "❌ Failed to connect to Ollama server: $OLLAMA_URL" >&2
+      return 1
+    }
+
+    if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+      local api_error
+      api_error=$(jq -r '.error // .message // empty' "$response_file" 2>/dev/null || true)
+
+      if [ -n "$api_error" ]; then
+        echo "❌ Ollama API error ($http_code): $api_error" >&2
+      else
+        echo "❌ Ollama API error ($http_code) from $OLLAMA_URL/api/generate" >&2
+      fi
+
+      if [[ "$api_error" == *"model"* && "$api_error" == *"not found"* ]]; then
+        echo "💡 Model '$model' is not available on that Ollama server. Pull it with: ollama pull $model" >&2
+      fi
+
+      rm -f "$response_file"
+      return 1
+    fi
+
+    local response_text
+    response_text=$(cat "$response_file")
+    rm -f "$response_file"
+
+    local generated
+    generated=$(jq -r '.response // empty' <<< "$response_text" 2>/dev/null || true)
+    if [ -z "$generated" ]; then
+      echo "❌ Ollama response did not include a 'response' field." >&2
+      return 1
+    fi
+
+    printf '%s\n' "$generated"
+    return
+  fi
+
+  ollama run "$model" <<< "$prompt"
 }
 
 while [[ "$1" == --* ]]; do
@@ -71,6 +172,30 @@ while [[ "$1" == --* ]]; do
         exit 1
       fi
       PROMPT_OVERRIDE="$2"
+      shift 2
+      ;;
+    --model)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --model"
+        exit 1
+      fi
+      MODEL_OVERRIDE="$2"
+      shift 2
+      ;;
+    --tika-url)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --tika-url"
+        exit 1
+      fi
+      TIKA_URL="$(normalize_url "$2")"
+      shift 2
+      ;;
+    --ollama-url)
+      if [ -z "$2" ]; then
+        echo "❌ Missing value for --ollama-url"
+        exit 1
+      fi
+      OLLAMA_URL="$(normalize_url "$2")"
       shift 2
       ;;
     --help)
@@ -125,14 +250,22 @@ elif [ "$EXT" = "pdf" ]; then
   if [ "$USE_POPPLER" = true ]; then
     echo "📄 Extracting text from PDF using Poppler..."
     pdftotext "$RESUME" "$TMP_RESUME" || { echo "❌ PDF extraction failed"; exit 1; }
+  elif [ -n "$TIKA_URL" ]; then
+    echo "📄 Extracting text from PDF using Tika server: $TIKA_URL"
+    extract_with_tika_server "$RESUME" "$TMP_RESUME" || { echo "❌ PDF extraction failed"; exit 1; }
   else
     echo "📄 Extracting text from PDF using Tika..."
     tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME" || { echo "❌ PDF extraction failed"; exit 1; }
   fi
 elif [ "$EXT" = "docx" ]; then
   TMP_RESUME="$RESUME_DIR/${BASENAME}_${TIMESTAMP}.txt"
-  echo "📄 Extracting text from DOCX using Tika..."
-  tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME" || { echo "❌ DOCX extraction failed"; exit 1; }
+  if [ -n "$TIKA_URL" ]; then
+    echo "📄 Extracting text from DOCX using Tika server: $TIKA_URL"
+    extract_with_tika_server "$RESUME" "$TMP_RESUME" || { echo "❌ DOCX extraction failed"; exit 1; }
+  else
+    echo "📄 Extracting text from DOCX using Tika..."
+    tika -t "$RESUME" 2>/dev/null > "$TMP_RESUME" || { echo "❌ DOCX extraction failed"; exit 1; }
+  fi
 else
   echo "❌ Unsupported file format: $EXT"
   exit 1
@@ -156,14 +289,22 @@ elif [ "$JD_EXT" = "pdf" ]; then
   if [ "$USE_POPPLER" = true ]; then
     echo "📄 Extracting job description from PDF using Poppler..."
     pdftotext "$JD" "$TMP_JD" || { echo "❌ Job description PDF extraction failed"; exit 1; }
+  elif [ -n "$TIKA_URL" ]; then
+    echo "📄 Extracting job description from PDF using Tika server: $TIKA_URL"
+    extract_with_tika_server "$JD" "$TMP_JD" || { echo "❌ Job description PDF extraction failed"; exit 1; }
   else
     echo "📄 Extracting job description from PDF using Tika..."
     tika -t "$JD" 2>/dev/null > "$TMP_JD" || { echo "❌ Job description PDF extraction failed"; exit 1; }
   fi
 elif [ "$JD_EXT" = "docx" ]; then
   TMP_JD="$JD_DIR/${JD_BASENAME}_${TIMESTAMP}.txt"
-  echo "📄 Extracting job description from DOCX using Tika..."
-  tika -t "$JD" 2>/dev/null > "$TMP_JD" || { echo "❌ Job description DOCX extraction failed"; exit 1; }
+  if [ -n "$TIKA_URL" ]; then
+    echo "📄 Extracting job description from DOCX using Tika server: $TIKA_URL"
+    extract_with_tika_server "$JD" "$TMP_JD" || { echo "❌ Job description DOCX extraction failed"; exit 1; }
+  else
+    echo "📄 Extracting job description from DOCX using Tika..."
+    tika -t "$JD" 2>/dev/null > "$TMP_JD" || { echo "❌ Job description DOCX extraction failed"; exit 1; }
+  fi
 else
   echo "❌ Unsupported job description file format: $JD_EXT"
   exit 1
@@ -200,6 +341,27 @@ if [ -z "$OLLAMA_MODEL_NAME" ]; then
   echo "❌ Prompt file must define a model: $PROMPT_FILE"
   exit 1
 fi
+
+if [ -n "$MODEL_OVERRIDE" ]; then
+  if [[ "$MODEL_OVERRIDE" == *:* ]]; then
+    OLLAMA_MODEL_NAME="${MODEL_OVERRIDE%%:*}"
+    OLLAMA_MODEL_TAG="${MODEL_OVERRIDE#*:}"
+    if [ -z "$OLLAMA_MODEL_TAG" ]; then
+      OLLAMA_MODEL_TAG="latest"
+      echo "ℹ️  --model provided without a tag value; using tag: latest"
+    fi
+  else
+    OLLAMA_MODEL_NAME="$MODEL_OVERRIDE"
+    OLLAMA_MODEL_TAG="latest"
+    echo "ℹ️  --model provided without a tag; using tag: latest"
+  fi
+
+  if [ -z "$OLLAMA_MODEL_NAME" ]; then
+    echo "❌ --model must include a model name, e.g. qwen3 or qwen3:8b"
+    exit 1
+  fi
+fi
+
 OLLAMA_MODEL="${OLLAMA_MODEL_NAME}:${OLLAMA_MODEL_TAG}"
 
 echo "🤖 Running ATS analysis with model: $OLLAMA_MODEL"
@@ -219,10 +381,10 @@ echo "--~--"
 echo ""
 if [ "$TEXT_ONLY" = true ]; then
   # Filter out the JSON part and only show the human-readable report
-  ollama run "$OLLAMA_MODEL" <<< "$PROMPT" | awk '/^- Parsing clarity:/ {print_it=1} print_it'
+  run_ollama_prompt "$OLLAMA_MODEL" "$PROMPT" | awk '/^- Parsing clarity:/ {print_it=1} print_it'
 else
   # Show full output including JSON
-  ollama run "$OLLAMA_MODEL" <<< "$PROMPT"
+  run_ollama_prompt "$OLLAMA_MODEL" "$PROMPT"
 fi
 echo ""
 echo "--~--"
