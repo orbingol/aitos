@@ -148,3 +148,6 @@ Thumbs.db
 .data/
 *.pdf
 *.txt
+
+# Local directories
+.examples
