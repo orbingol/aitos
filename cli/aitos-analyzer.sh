@@ -44,6 +44,16 @@ set -o pipefail
 USE_POPPLER=false
 TEXT_ONLY=false
 PROMPT_OVERRIDE=""
+AITOS_VERSION="${AITOS_VERSION:-dev}"
+
+print_usage() {
+  cat <<EOF
+Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>
+Example: $0 resume.pdf job.txt
+Example with custom prompt: $0 --prompt cv-analyzer-qwen.yaml resume.pdf job.txt
+Default prompt: cv-analyzer-default.yaml
+EOF
+}
 
 while [[ "$1" == --* ]]; do
   case "$1" in
@@ -63,6 +73,14 @@ while [[ "$1" == --* ]]; do
       PROMPT_OVERRIDE="$2"
       shift 2
       ;;
+    --help)
+      print_usage
+      exit 0
+      ;;
+    --version)
+      echo "$AITOS_VERSION"
+      exit 0
+      ;;
     *)
       echo "Unknown option: $1"
       exit 1
@@ -71,10 +89,7 @@ while [[ "$1" == --* ]]; do
 done
 
 if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 [--poppler] [--text-only] [--prompt <yaml-file>] <resume.pdf/docx/txt> <job_description.pdf/docx/txt>"
-  echo "Example: $0 resume.pdf job.txt"
-  echo "Example with custom prompt: $0 --prompt prompts/qwen3.yaml resume.pdf job.txt"
-  echo "Default prompt: prompts/cv-analyzer-default.yaml"
+  print_usage
   exit 1
 fi
 
@@ -92,6 +107,7 @@ if [ ! -f "$JD" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROMPTS_DIR="${AITOS_PROMPTS_DIR:-$SCRIPT_DIR/prompts}"
 RESUME_DIR="$(cd "$(dirname "$RESUME")" && pwd)"
 JD_DIR="$(cd "$(dirname "$JD")" && pwd)"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -161,12 +177,12 @@ fi
 echo "✅ Job description text ready: $TMP_JD"
 
 # 2. Run Ollama with working prompt
-PROMPT_FILE="$SCRIPT_DIR/prompts/cv-analyzer-default.yaml"
+PROMPT_FILE="$PROMPTS_DIR/cv-analyzer-default.yaml"
 if [ -n "$PROMPT_OVERRIDE" ]; then
   if [ -f "$PROMPT_OVERRIDE" ]; then
     PROMPT_FILE="$PROMPT_OVERRIDE"
-  elif [ -f "$SCRIPT_DIR/prompts/$PROMPT_OVERRIDE" ]; then
-    PROMPT_FILE="$SCRIPT_DIR/prompts/$PROMPT_OVERRIDE"
+  elif [ -f "$PROMPTS_DIR/$PROMPT_OVERRIDE" ]; then
+    PROMPT_FILE="$PROMPTS_DIR/$PROMPT_OVERRIDE"
   else
     echo "❌ Prompt file not found: $PROMPT_OVERRIDE"
     exit 1

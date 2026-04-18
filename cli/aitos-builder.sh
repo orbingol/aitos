@@ -46,6 +46,21 @@ set -o pipefail
 USE_POPPLER=false
 STORY_FILE=""
 PROMPT_OVERRIDE=""
+AITOS_VERSION="${AITOS_VERSION:-dev}"
+
+print_usage() {
+  cat <<EOF
+Usage: $0 [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt/pdf/docx>
+Example: $0 ./data target_job.txt
+Example with PDF target job: $0 ./data target_job.pdf
+Example with story: $0 --story story.txt ./data target_job.txt
+Example with custom prompt: $0 --prompt cv-builder-default.yaml ./data target_job.txt
+
+data_dir must contain pairs: cv1.* + job1.*, cv2.* + job2.*, ...
+CV and job files may be .pdf, .docx, or .txt
+Default prompt: cv-builder-default.yaml
+EOF
+}
 
 while [[ "$1" == --* ]]; do
   case "$1" in
@@ -69,6 +84,14 @@ while [[ "$1" == --* ]]; do
       PROMPT_OVERRIDE="$2"
       shift 2
       ;;
+    --help)
+      print_usage
+      exit 0
+      ;;
+    --version)
+      echo "$AITOS_VERSION"
+      exit 0
+      ;;
     *)
       echo "Unknown option: $1"
       exit 1
@@ -77,15 +100,7 @@ while [[ "$1" == --* ]]; do
 done
 
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 [--poppler] [--story <story.txt>] [--prompt <prompt.yaml>] <data_dir> <target_job.txt/pdf/docx>"
-  echo "Example: $0 ./data target_job.txt"
-  echo "Example with PDF target job: $0 ./data target_job.pdf"
-  echo "Example with story: $0 --story story.txt ./data target_job.txt"
-  echo "Example with custom prompt: $0 --prompt my-prompt.yaml ./data target_job.txt"
-  echo ""
-  echo "data_dir must contain pairs: cv1.* + job1.*, cv2.* + job2.*, ..."
-  echo "CV and job files may be .pdf, .docx, or .txt"
-  echo "Default prompt: cv-builder-default.yaml (model and tag configured inside the YAML)"
+  print_usage
   exit 1
 fi
 
@@ -108,6 +123,7 @@ if [ ! -f "$TARGET_JD" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROMPTS_DIR="${AITOS_PROMPTS_DIR:-$SCRIPT_DIR/prompts}"
 DATA_DIR="$(cd "$DATA_DIR" && pwd)"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 TMP_DIR=$(mktemp -d)
@@ -294,17 +310,17 @@ echo "✅ Loaded $PAIR_COUNT CV+job pair(s)"
 # ── load prompt template ──────────────────────────────────────────────────────
 
 if [ -n "$PROMPT_OVERRIDE" ]; then
-  # Accept absolute path, path relative to cwd, or bare filename resolved in prompts/
+  # Accept absolute path, path relative to cwd, or bare filename resolved in the bundled prompt directory.
   if [ -f "$PROMPT_OVERRIDE" ]; then
     PROMPT_FILE="$(cd "$(dirname "$PROMPT_OVERRIDE")" && pwd)/$(basename "$PROMPT_OVERRIDE")"
-  elif [ -f "$SCRIPT_DIR/prompts/$PROMPT_OVERRIDE" ]; then
-    PROMPT_FILE="$SCRIPT_DIR/prompts/$PROMPT_OVERRIDE"
+  elif [ -f "$PROMPTS_DIR/$PROMPT_OVERRIDE" ]; then
+    PROMPT_FILE="$PROMPTS_DIR/$PROMPT_OVERRIDE"
   else
     echo "❌ Prompt file not found: $PROMPT_OVERRIDE"
     exit 1
   fi
 else
-  PROMPT_FILE="$SCRIPT_DIR/prompts/cv-builder-default.yaml"
+  PROMPT_FILE="$PROMPTS_DIR/cv-builder-default.yaml"
 fi
 
 if [ ! -f "$PROMPT_FILE" ]; then
