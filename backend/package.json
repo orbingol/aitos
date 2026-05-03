@@ -23,7 +23,7 @@
     "node-fetch": "^3.3.2",
     "pdf-parse": "1.1.1",
     "swagger-ui-express": "^5.0.1",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
