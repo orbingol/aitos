@@ -2096,7 +2096,7 @@ __metadata:
     "@vitejs/plugin-react": "npm:^4.2.1"
     "@vitest/coverage-v8": "npm:4.1.4"
     autoprefixer: "npm:^10.4.21"
-    axios: "npm:^1.18.0"
+    axios: "npm:^1.20.0"
     eslint: "npm:^9.39.1"
     eslint-plugin-react: "npm:^7.37.5"
     eslint-plugin-react-hooks: "npm:^7.0.1"
